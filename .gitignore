@@ -1,0 +1,37 @@
+# Python Virtual Environment & Bytecode
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Node & Frontend Build
+frontend/node_modules/
+node_modules/
+frontend/dist/
+frontend/.vite/
+.npm
+.eslintcache
+
+# Environment variables & local credentials
+.env
+.env.*
+*.local
+gcp_config.txt
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Temporary / Scratch data
+scratch/
+tmp/
+*.log

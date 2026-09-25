@@ -1,0 +1,67 @@
+:root {
+  --carrier-blue: #003882;
+  --carrier-light-blue: #0066cc;
+  --carrier-accent: #00a3e0;
+  --carrier-dark: #0a192f;
+  --carrier-bg: #f8fafc;
+  --carrier-surface: #ffffff;
+  --carrier-border: #e2e8f0;
+  --carrier-text: #1e293b;
+  --carrier-muted: #64748b;
+  --carrier-safety: #dc2626;
+  --carrier-success: #16a34a;
+  --carrier-warning: #ea580c;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--carrier-text);
+  background-color: var(--carrier-bg);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  background-color: var(--carrier-bg);
+  color: var(--carrier-text);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, textarea {
+  font-family: inherit;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.9); }
+}
+
+.pulsing-dot {
+  animation: pulse-dot 1.5s infinite ease-in-out;
+}
