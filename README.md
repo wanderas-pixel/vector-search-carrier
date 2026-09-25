@@ -18,7 +18,7 @@ Field service technicians face a formidable operational challenge: Carrier manuf
 This project implements an enterprise-grade **Multimodal Field Specialist AI Assistant** built natively on **Google Cloud's next-generation Agentic Stack**:
 * **Vector Search 2.0 (Agent Retrieval)**: High-speed hybrid vector database with instant kNN, zero index deployment delay, and dual-vector schemas (768-dim text + 1408-dim multimodal visual vectors).
 * **Google Agent Development Kit (ADK 2.0)**: Production-grade agent orchestration framework managing tool dispatching, conversation memory, and diagnostic workflows.
-* **Agent Platform Runtime & Agent Registry**: Managed serverless runtime hosting the reasoning engine (`reasoningEngines/5108959393542569984`) governed under central enterprise cataloging and access policies.
+* **Agent Platform Runtime & Agent Registry**: Managed serverless runtime hosting the reasoning engine governed under central enterprise cataloging and access policies.
 * **Gemini Flash Reasoning Core**: Multimodal model delivering lightning-fast inference over dense technical tables and schematics.
 * **Sub-2-Second Latency Optimization**: Server-Sent Events (SSE) streaming and in-memory LRU tool caching reducing Time-to-First-Token (TTFT) from 12.4s to **~1.4s**.
 * **Inline Edge-to-Edge Schematic Rendering**: 154 high-resolution 300 DPI WebP diagrams served directly inline on mobile and desktop viewports without requiring "click to expand".
