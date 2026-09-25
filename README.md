@@ -250,21 +250,7 @@ python3 test_vector_search_2.py
 
 ---
 
-## 9. Observability & Audit Logging
-
-Every interaction is captured as a structured JSON event in Google Cloud Logging:
-* **Log Names**: `projects/genai-demos-391416/logs/carrier-agent-audit` and `carrier-api-server`.
-* **Telemetry Captured**: Timestamp, user ID, session ID, target model series, raw query, tool invoked, cache hit flag (`TOOL_INVOCATION_CACHE_HIT`), tool latency, token counts, and total perceived turnaround time.
-* **Audit Query Example**:
-  ```sql
-  resource.type="global"
-  logName=~"projects/genai-demos-391416/logs/carrier-(agent-audit|api-server)"
-  jsonPayload.event_type="TOOL_INVOCATION_CACHE_HIT"
-  ```
-
----
-
-## 10. Documentation Reference
+## 9. Documentation Reference
 
 * **[implementation.md](implementation.md)**: Full architectural specification, dual-vector schema design, ADK agent implementation, and Section 12 Latency Optimization analysis.
 * **[evaluation.md](evaluation.md)**: Master evaluation test suite with 14 comprehensive test cases covering precision, visual retrieval, and safety.
@@ -272,6 +258,6 @@ Every interaction is captured as a structured JSON event in Google Cloud Logging
 
 ---
 
-## 11. License
+## 10. License
 
 This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
