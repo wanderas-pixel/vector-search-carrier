@@ -738,6 +738,23 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
                           {...props}
                         />
                       ),
+                      table: ({ node, ...props }) => (
+                        <div style={{ overflowX: "auto", margin: "16px 0", borderRadius: "8px", border: "1px solid #cbd5e1", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", textAlign: "left" }} {...props} />
+                        </div>
+                      ),
+                      thead: ({ node, ...props }) => (
+                        <thead style={{ backgroundColor: "#003882", color: "#ffffff" }} {...props} />
+                      ),
+                      th: ({ node, ...props }) => (
+                        <th style={{ padding: "10px 14px", fontWeight: 600, borderBottom: "2px solid #00224f", whiteSpace: "nowrap" }} {...props} />
+                      ),
+                      td: ({ node, ...props }) => (
+                        <td style={{ padding: "8px 14px", borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }} {...props} />
+                      ),
+                      tr: ({ node, ...props }) => (
+                        <tr style={{ backgroundColor: "#ffffff" }} {...props} />
+                      ),
                     }}
                   >
                     {msg.content}
