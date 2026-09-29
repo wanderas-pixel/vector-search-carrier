@@ -4,7 +4,7 @@
   "description": "Production Agent Retrieval and multimodal diagnostic assistant for Carrier commercial chillers (19XR, 23XRV, 30HX, 30RC, 30XV).",
   "version": "2.0.0",
   "runtime": "agent_platform_runtime",
-  "model": "gemini-2.5-flash",
+  "model": "gemini-3.8-flash",
   "capabilities": [
     "agent_retrieval_vector_search_2",
     "multimodal_schematic_resolution",

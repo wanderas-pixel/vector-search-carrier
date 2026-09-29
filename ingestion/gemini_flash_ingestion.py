@@ -1,6 +1,6 @@
 """
-Production Ingestion Engine: Pure Vertex AI Gemini 2.5 Flash + Vector Search 2.0.
-Replaces Document AI completely. Uses Gemini 2.5 Flash for multimodal PDF understanding,
+Production Ingestion Engine: Pure Vertex AI Gemini 3.8 Flash + Vector Search 2.0.
+Uses Gemini 3.8 Flash for multimodal PDF understanding,
 extracts lossless GitHub-flavored Markdown tables, generates deep schematic descriptions
 with terminal pinouts, and ingests DataObjects directly into Vector Search 2.0.
 """
@@ -103,7 +103,7 @@ _thread_local = threading.local()
 
 
 class GeminiFlashIngestionEngine:
-    """Enterprise Ingestion Engine powered by Vertex AI Gemini 2.5 Flash."""
+    """Enterprise Ingestion Engine powered by Vertex AI Gemini 3.8 Flash."""
 
     def __init__(
         self,
@@ -111,7 +111,7 @@ class GeminiFlashIngestionEngine:
         location: str = LOCATION,
         assets_bucket: str = ASSETS_BUCKET,
         collection_name: str = COLLECTION_NAME,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3.8-flash",
     ):
         self.project_id = project_id
         self.location = location
@@ -165,7 +165,7 @@ class GeminiFlashIngestionEngine:
         model_series: str,
         form_number: str
     ) -> Dict[str, Any]:
-        """Calls Gemini 2.5 Flash to parse page content with structured JSON output."""
+        """Calls Gemini 3.8 Flash to parse page content with structured JSON output."""
         img_buffer = io.BytesIO()
         pil_image.save(img_buffer, format="JPEG", quality=75)
         img_part = Part.from_data(data=img_buffer.getvalue(), mime_type="image/jpeg")
@@ -351,9 +351,9 @@ class GeminiFlashIngestionEngine:
         max_pages: Optional[int] = None,
         concurrency: int = 6
     ) -> List[Dict[str, Any]]:
-        """Processes a Carrier PDF manual concurrently with Gemini 2.5 Flash."""
+        """Processes a Carrier PDF manual concurrently with Gemini 3.8 Flash."""
         print(f"\n==================================================")
-        print(f"[Gemini 2.5 Flash] Processing {model_series} ({pdf_path.name}) with {concurrency} workers...")
+        print(f"[Gemini 3.8 Flash] Processing {model_series} ({pdf_path.name}) with {concurrency} workers...")
         print(f"==================================================")
 
         reader = pypdf.PdfReader(str(pdf_path))
@@ -383,7 +383,7 @@ class GeminiFlashIngestionEngine:
                 except Exception as exc:
                     print(f"[ERROR] Exception processing page {page_num} of {model_series}: {exc}")
 
-        print(f"[Gemini 2.5 Flash] Finished {model_series}: Created {len(data_objects)} DataObjects across {len(pages_to_process)} pages.")
+        print(f"[Gemini 3.8 Flash] Finished {model_series}: Created {len(data_objects)} DataObjects across {len(pages_to_process)} pages.")
         return data_objects
 
     def upload_to_vector_search(self, data_objects: List[Dict[str, Any]], batch_size: int = 50) -> int:
@@ -429,7 +429,7 @@ class GeminiFlashIngestionEngine:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Concurrent Pure Gemini 2.5 Flash Ingestion Engine for Carrier Chillers")
+    parser = argparse.ArgumentParser(description="Concurrent Pure Gemini 3.8 Flash Ingestion Engine for Carrier Chillers")
     parser.add_argument("--pdf", type=str, help="Path to single Carrier PDF manual")
     parser.add_argument("--model", type=str, help="Model series (19XR, 23XRV, 30HX, 30RC, 30XV)")
     parser.add_argument("--form", type=str, help="Form number (e.g. 30HX-2T)")
@@ -488,7 +488,7 @@ def main():
         print("Please provide --pdf <path> --model <series> or --all. Example: python ingestion/gemini_flash_ingestion.py --pdf 'Input Documents/30HX-2T.pdf' --pages 126,122")
         sys.exit(1)
 
-    print(f"\n[DONE] Finished Gemini 2.5 Flash Ingestion: Generated {total_generated} DataObjects, Ingested {total_uploaded} into Vector Search 2.0.")
+    print(f"\n[DONE] Finished Gemini 3.8 Flash Ingestion: Generated {total_generated} DataObjects, Ingested {total_uploaded} into Vector Search 2.0.")
 
 
 if __name__ == "__main__":

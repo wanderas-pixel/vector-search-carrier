@@ -1,6 +1,6 @@
 """
 Cloud Run Ingestion Worker: Listens to Eventarc GCS events or executes batch jobs
-to ingest Carrier PDF manuals into Vector Search 2.0 with Gemini 2.5 Flash.
+to ingest Carrier PDF manuals into Vector Search 2.0 with Gemini 3.8 Flash.
 """
 
 import os
@@ -28,7 +28,7 @@ def main():
         print("[ERROR] No input PDF GCS URI provided. Set INPUT_GCS_PDF_URI or pass as argument.")
         sys.exit(1)
 
-    print(f"Starting Gemini 2.5 Flash Cloud Run Ingestion Worker for: {gcs_pdf_uri}")
+    print(f"Starting Gemini 3.8 Flash Cloud Run Ingestion Worker for: {gcs_pdf_uri}")
     
     # Infer model and form from filename
     filename = Path(gcs_pdf_uri).name.upper()
@@ -60,7 +60,7 @@ def main():
             form_number=matched_model["form"]
         )
 
-        print(f"Successfully processed {len(data_objects)} objects from {filename} with Gemini 2.5 Flash. Ingesting into Vector Search 2.0...")
+        print(f"Successfully processed {len(data_objects)} objects from {filename} with Gemini 3.8 Flash. Ingesting into Vector Search 2.0...")
         total_ingested = engine.upload_to_vector_search(data_objects)
         print(f"[COMPLETE] Ingestion Job Finished: {total_ingested} objects loaded into Vector Search 2.0.")
     finally:

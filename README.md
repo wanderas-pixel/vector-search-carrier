@@ -1,9 +1,9 @@
 # Carrier Specialist AI: Multimodal Field Engineering Assistant
-### Enterprise Agent Retrieval (Vector Search 2.0), Google ADK 2.0, and Vertex AI Gemini 2.5 Flash
+### Enterprise Agent Retrieval (Vector Search 2.0), Google ADK 2.0, and Vertex AI Gemini 3.8 Flash
 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Vector_Search_2.0-4285F4?logo=google-cloud&logoColor=white)](https://cloud.google.com/vertex-ai)
 [![Agent Framework](https://img.shields.io/badge/Agent_Framework-Google_ADK_2.0-34A853?logo=google&logoColor=white)](https://cloud.google.com/products/gemini/enterprise)
-[![Reasoning Engine](https://img.shields.io/badge/Reasoning_Model-Gemini_2.5_Flash-EA4335?logo=google-gemini&logoColor=white)](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal-overview)
+[![Reasoning Engine](https://img.shields.io/badge/Reasoning_Model-Gemini_3.8_Flash-EA4335?logo=google-gemini&logoColor=white)](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal-overview)
 [![Frontend](https://img.shields.io/badge/Frontend-React_19_+_TypeScript_+_Vite-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
@@ -16,7 +16,7 @@ When a mission-critical commercial chiller plant experiences a fault in a hospit
 Field service technicians face a formidable operational challenge: Carrier manufactures multiple distinct commercial chiller lines—including centrifugal (`19XR`), screw (`23XRV`), and air-cooled scroll/screw machines (`30HX`, `30RC`, `30XV`). Navigating across **858 pages of dense engineering manuals**, tracing high-voltage control board schematics, deciphering alphanumeric fault codes, and preventing cross-equipment pinout contamination requires extreme precision.
 
 This project implements an enterprise-grade **Multimodal Field Specialist AI Assistant** built natively on **Google Cloud's next-generation Agentic Stack**:
-* **Vertex AI Gemini 2.5 Flash Ingestion**: Native multimodal PDF comprehension extracts structured Markdown diagnostic tables, electrical schematics, and connector pinouts with sub-second processing speed and high cost efficiency (\$0.30 per 1,000 pages).
+* **Vertex AI Gemini 3.8 Flash Ingestion**: Native multimodal PDF comprehension extracts structured Markdown diagnostic tables, electrical schematics, and connector pinouts with sub-second processing speed and high cost efficiency (\$0.30 per 1,000 pages).
 * **Vertex AI Vector Search 2.0 (Agent Retrieval)**: Real-time hybrid search engine with instant kNN, zero index deployment delay, and dual-vector schemas combining dense semantic vectors with lexical BM25 keyword matching via Reciprocal Rank Fusion (RRF).
 * **Dual-Modal Embeddings**: Server-side auto-embeddings via `gemini-embedding-001` (768-dim) for text knowledge chunks alongside client-side `multimodalembedding@001` (1,408-dim) for high-resolution 300 DPI electrical schematics.
 * **Google Agent Development Kit (ADK 2.0)**: Production-grade agent orchestration framework managing tool dispatching, conversational memory, and diagnostic workflows. Configured with `BuiltInPlanner(thinking_budget=0)` for ultra-low latency execution (<7s total turn) and instant first-token streaming.
@@ -38,7 +38,7 @@ This project implements an enterprise-grade **Multimodal Field Specialist AI Ass
 │             CLOUD RUN INGESTION WORKER                 │
 │         (Serverless Multi-Threaded Host)               │
 │                                                        │
-│  ├── 1. Gemini 2.5 Flash Vision: Tables & Schematics   │
+│  ├── 1. Gemini 3.8 Flash Vision: Tables & Schematics   │
 │  ├── 2. Multimodal Embeddings: multimodalembedding@001 │
 │  └── 3. Batch Ingestion: DataObject Batch Size = 50   │
 └────────────────────────────────────────────────────────┘
@@ -85,8 +85,8 @@ The platform natively supports Carrier's five primary commercial chiller lines:
 
 ## 4. Key Architectural Highlights & Capabilities
 
-### 1. Gemini 2.5 Flash Multimodal Extraction Engine
-The ingestion pipeline leverages **Vertex AI Gemini 2.5 Flash** for direct, high-fidelity multimodal document understanding:
+### 1. Gemini 3.8 Flash Multimodal Extraction Engine
+The ingestion pipeline leverages **Vertex AI Gemini 3.8 Flash** for direct, high-fidelity multimodal document understanding:
 * **Direct Multimodal Processing**: Ingests high-resolution PDF pages natively without intermediate text rasterization steps.
 * **Lossless Table Conversion**: Formats complex multi-column diagnostic charts, pressure-temperature ratings, and alarm matrices directly into GitHub-flavored Markdown.
 * **Schematic & Pinout Extraction**: Identifies electrical boundary regions, isolates schematic figures, tags circuit components (`CIOB`, `MBB`, `TB1`), and extracts precise connector pinout mappings (e.g. `J40 Pins 1-2`).
@@ -124,7 +124,7 @@ To ensure field technicians receive instant guidance during critical plant servi
 │   │   └── components/          # Message bubbles, diagram lightboxes, citations
 │   └── package.json
 ├── ingestion/                   # Serverless ingestion engine (Cloud Run)
-│   ├── gemini_flash_ingestion.py# Pure Gemini 2.5 Flash multimodal extraction engine
+│   ├── gemini_flash_ingestion.py# Pure Gemini 3.8 Flash multimodal extraction engine
 │   ├── cloud_run_worker.py      # Cloud Run multi-threaded batch ingestion worker
 │   ├── Dockerfile               # Container build definition for Cloud Run Jobs
 │   └── requirements.txt

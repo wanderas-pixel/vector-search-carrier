@@ -24,7 +24,7 @@ from app.plugins import CarrierAuditLoggingPlugin
 _, default_project_id = google.auth.default()
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", default_project_id or "genai-demos-391416")
 LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-MODEL_NAME = os.environ.get("AGENT_MODEL_NAME", "gemini-2.5-flash")
+MODEL_NAME = os.environ.get("AGENT_MODEL_NAME", "gemini-3.8-flash")
 
 os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
 os.environ["GOOGLE_CLOUD_LOCATION"] = LOCATION
