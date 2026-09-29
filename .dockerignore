@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.DS_Store
+Input Documents
+carrier_documents.jsonl
+thelook_dataset.jsonl
+rendered_assets
+vector-search-2-intro.ipynb
+node_modules
+frontend/node_modules

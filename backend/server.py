@@ -14,8 +14,10 @@ import json
 import uuid
 import re
 from typing import Optional, List, Dict, Any
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from google.cloud import storage
@@ -65,8 +67,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session management for ADK
-session_service = InMemorySessionService()
+from app.session_factory import get_session_service
+
+# Session management for ADK (Production Distributed or Local Dev)
+session_service = get_session_service()
 runners: Dict[str, Runner] = {}
 
 class ChatRequest(BaseModel):
@@ -502,6 +506,20 @@ def get_recent_logs(limit: int = 15):
         return {"count": 0, "logs": [], "error": str(e)}
 
 
+# Static file serving for single-container production deployment on Cloud Run
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="static_assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="API route not found")
+        index_file = FRONTEND_DIST / "index.html"
+        return FileResponse(str(index_file))
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.server:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("backend.server:app", host="0.0.0.0", port=port, reload=True)

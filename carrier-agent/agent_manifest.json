@@ -1,0 +1,49 @@
+{
+  "name": "carrier-chiller-specialist",
+  "displayName": "Carrier Industrial Chiller Field Specialist AI",
+  "description": "Production Agent Retrieval and multimodal diagnostic assistant for Carrier commercial chillers (19XR, 23XRV, 30HX, 30RC, 30XV).",
+  "version": "2.0.0",
+  "runtime": "agent_platform_runtime",
+  "model": "gemini-2.5-flash",
+  "capabilities": [
+    "agent_retrieval_vector_search_2",
+    "multimodal_schematic_resolution",
+    "hybrid_dense_lexical_rrf",
+    "proactive_first_turn_visuals",
+    "zero_downtime_session_continuity"
+  ],
+  "supportedEquipment": [
+    "Carrier 19XR Hermetic Centrifugal",
+    "Carrier 23XRV Variable-Speed Screw",
+    "Carrier 30HX Water-Cooled Screw",
+    "Carrier 30RC Air-Cooled Scroll (R-32)",
+    "Carrier 30XV Variable-Speed Air-Cooled Screw"
+  ],
+  "governance": {
+    "organization": "Carrier Commercial HVAC Service Operations",
+    "policyEnforcement": "mandatory_loto_and_safety_disclaimers",
+    "competitorGuardrail": "carrier_exclusive_service_boundary"
+  },
+  "observability": {
+    "logging": {
+      "enabled": true,
+      "logLevel": "INFO",
+      "destination": "google_cloud_logging",
+      "logStreams": [
+        "carrier-agent-audit",
+        "carrier-api-server"
+      ],
+      "logPayloads": true,
+      "traceToolCalls": true,
+      "auditEvents": [
+        "TOOL_INVOCATION_START",
+        "TOOL_INVOCATION_CACHE_HIT",
+        "CHAT_STREAM_COMPLETED"
+      ]
+    },
+    "analytics": {
+      "bigqueryExport": true,
+      "dataset": "carrier_agent_analytics"
+    }
+  }
+}
