@@ -164,6 +164,14 @@ Through profiling and iterative tuning, perceived end-to-end latency was reduced
 * Technicians can ask targeted follow-up questions (e.g., *"What are the possible fault conditions that lead to this alarm?"*) without having to repeat equipment models or error codes.
 * Dedicated "New Chat" button and automatic session reset when switching target chiller model pills to prevent cross-equipment context bleeding.
 
+### 3.5 Proactive Multimodal Retrieval (Mandatory First-Turn Schematics)
+* **First-Turn Diagram Delivery**: Field technicians servicing equipment need schematics immediately. When queries touch terminal pinouts (TB1, TB2, J-connectors, J40), emergency stops, safety switches (SW1, SW2), field/control wiring, or board layouts, the agent is mandated to **proactively invoke `carrier_visual_search` in the very first turn**.
+* **Zero Second-Turn Prompts**: Eliminates the need for follow-up prompts (e.g. *"Is there a diagram for that?"*) or unhelpful text pointers (e.g. *"refer to the manual's schematics"*). Schematics are embedded directly inline edge-to-edge alongside exact pinout specifications.
+
+### 3.6 Prompt Model Precedence & Clean Stream Token Filtering
+* **In-Prompt Model Overrides**: If the user's prompt mentions a specific model (e.g., asking for *23XRV* while the UI pill is set to *30RC*), the system automatically detects the model via regex and prioritizes the requested model, preventing false prompt rejections.
+* **Suppression of Pre-Tool Chatter**: In `/api/chat/stream`, intermediate model thinking and trial-and-error chatter generated prior to or alongside tool execution (`function_call`) are filtered from the client SSE stream, ensuring technicians only receive clean, authoritative diagnostic intelligence.
+
 ---
 
 ## 4. Supported Carrier Commercial Chiller Fleet

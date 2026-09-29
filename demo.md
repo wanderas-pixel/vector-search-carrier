@@ -151,19 +151,17 @@ Switch to **Tab 1** ([http://localhost:3000](http://localhost:3000)).
 
 ---
 
-#### Demo Scenario 3: Inline Edge-to-Edge Schematic Retrieval (Model: 30XV)
+#### Demo Scenario 3: Proactive First-Turn Schematic & Pinout Retrieval (Model: 30XV)
 1. **Action**: Click the **`30XV`** model pill (this switches models and starts a clean session).
 2. **Type or Paste Prompt**:
    ```text
-   Show me the field wiring schematic for CIOB terminal J40 on 30XV
+   What is the exact terminal pinout for the Dual Emergency Stop option on the Carrier 30XV chiller?
    ```
 3. **What to Point Out Live on Screen**:
-   * **Multimodal Visual Retrieval**: The agent recognized the visual request and dispatched `carrier_visual_search`.
-   * **Inline High-Resolution Diagram**: The schematic diagram renders **fully opened edge-to-edge right inside the conversation stream**—no thumbnail, no need to "click to expand".
-   * **Exact Pinout Verification**: Point to the schematic title bar:
-     * *Carrier 30XV Field Wiring Connections (Form 30XV-6T, Page 42)*.
-     * Note that pins 1 & 2 on the Centralized I/O Board (CIOB) J40 terminal correspond to the **Dual Emergency Stop switch**.
-   * Emphasize that the technician can zoom in directly on their tablet or phone in the field to trace the terminal block wiring.
+   * **Proactive Multimodal Retrieval**: Emphasize that the user asked for a *terminal pinout* without explicitly saying "show me a diagram". The agent **proactively invoked `carrier_visual_search` in the very first turn** rather than making the technician ask twice or telling them to "refer to the manual".
+   * **Exact Pinout Verification**: Pins 1 & 2 on the Centralized I/O Board (CIOB) J40 terminal correspond to the **Dual Emergency Stop switch** (normally closed).
+   * **Inline High-Resolution Diagram**: The schematic diagrams (`Fig. 106 — 30XV Typical Field Wiring Schematic` and `Fig. 119 — 30XV 24V Control Wiring`) render **fully opened edge-to-edge right inside the conversation stream**.
+   * **LOTO Safety Warnings**: Point out mandatory Lockout/Tagout and DC bus capacitor discharge checks.
 
 ---
 
@@ -264,7 +262,7 @@ Switch to **Tab 5** (Google Cloud Logging Logs Explorer).
 | :- | :--- | :--- | :--- | :--- |
 | **1** | **Alarm T051** | `30HX` | `What does alarm T051 mean on 30HX?` | Compressor A1 Failure, Navigator ENTER+ESCAPE instructions, Form 30HX-2T citation. |
 | **2** | **Multi-Turn Faults** | *(Same)* | `What are the possible fault conditions that lead to this alarm?` | Cache hit (<1ms tool latency), bulleted list of 8 electrical/mechanical faults. |
-| **3** | **Inline Schematic** | `30XV` | `Show me the field wiring schematic for CIOB terminal J40 on 30XV` | High-res CIOB wiring schematic opened inline edge-to-edge, Dual E-stop pinout. |
+| **3** | **Proactive Schematic** | `30XV` | `What is the exact terminal pinout for the Dual Emergency Stop option on the Carrier 30XV chiller?` | Proactively fetches wiring schematics in turn 1 without asking twice, CIOB J40 pins 1 & 2, LOTO safety warning. |
 | **4** | **Safety Protocols** | `30RC` | `What safety precautions are required before servicing the refrigeration circuit on 30RC?` | R-32 A2L mild flammability protocol, ventilation, leak detection, Form 30RC-1T. |
 | **5** | **Competitor Guardrail**| `All` | `How do I clear an oil pressure trip on a Trane CenTraVac CVHE chiller?` | Polite decline: exclusively certified for Carrier equipment. |
 

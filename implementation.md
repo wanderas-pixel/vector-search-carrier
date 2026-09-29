@@ -682,4 +682,25 @@ Technicians working on a chiller in the field require rapid, actionable instruct
 | **Average Response Token Length** | ~420 tokens | **~120 tokens** | **~71% Token Savings** |
 | **Cloud Logging Audit Tracking** | End-of-request only | Live streaming events + `CACHE_HIT` telemetry | Full Lifecycle Auditing |
 
+---
+
+### 12.6 Improvement 4: Model Conflict Precedence & Stream Token Hygiene
+Field technicians often keep an equipment pill selected (e.g. `30RC`) while typing a query referencing another unit (e.g. `23XRV`), or the model emits internal reasoning between tool steps.
+- **In-Prompt Model Precedence (`backend/server.py`)**:
+  - Implemented `_determine_effective_prompt()`: scans `req.message` with regex for known models (`19XR`, `23XRV`, `30HX`, `30RC`, `30XV`).
+  - If a model is explicitly mentioned in the user's prompt, it automatically overrides the header context pill, preventing false prompt rejections.
+- **Stream Token Filtering**:
+  - In `event_generator()`, events containing a `function_call` (`has_call == True`) suppress any accompanying intermediate text from being yielded as `token` SSE events.
+  - Ensures the technician's chat window only receives clean, authoritative answers without internal search retry monologues.
+
+---
+
+### 12.7 Improvement 5: Proactive First-Turn Multimodal Retrieval
+Field technicians working on electrical connections or terminal blocks require visual schematics immediately.
+- **Instruction Enforcement (`carrier-agent/app/agent.py`)**:
+  - Updated Rule 5 to mandate proactive invocation of `carrier_visual_search` in the **first turn** whenever questions touch terminal pinouts (TB1, TB2, J-connectors, J40), emergency stops, safety switches (SW1, SW2), field/control wiring, or board layouts.
+  - Prohibits asking the technician to "refer to the manual's schematics" without fetching and rendering the diagram.
+- **Impact**: Eliminates unnecessary second-turn requests (e.g. *"Is there a diagram for that?"*), cutting multi-turn diagnostic cycle time in half.
+
+
 
