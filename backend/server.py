@@ -12,6 +12,7 @@ import sys
 import time
 import json
 import uuid
+import re
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
@@ -176,6 +177,20 @@ def get_supported_models():
     ]
 
 
+def _determine_effective_prompt(message: str, model_series: Optional[str]) -> str:
+    """Intelligently resolves target chiller model, allowing in-prompt model mentions to override dropdown."""
+    detected_model = None
+    for m in ["19XR", "23XRV", "30HX", "30RC", "30XV"]:
+        if re.search(rf"\b{m}\b", message, re.IGNORECASE):
+            detected_model = m
+            break
+
+    target_model = detected_model or (model_series if model_series and model_series != "All Models" else None)
+    if target_model:
+        return f"[Chiller Model: Carrier {target_model}]\n{message}"
+    return message
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     server_start_t = time.time()
@@ -202,10 +217,8 @@ async def chat(req: ChatRequest):
 
     runner = Runner(agent=root_agent, session_service=session_service, app_name="carrier_agent_app")
 
-    # Format user prompt with explicit model context if supplied
-    effective_prompt = req.message
-    if req.model_series and req.model_series != "All Models":
-        effective_prompt = f"[Chiller Model: Carrier {req.model_series}]\n{req.message}"
+    # Format user prompt with intelligent model resolution
+    effective_prompt = _determine_effective_prompt(req.message, req.model_series)
 
     tools_used: List[ToolExecutionInfo] = []
     final_text_parts: List[str] = []
@@ -220,16 +233,17 @@ async def chat(req: ChatRequest):
             )
         ):
             if hasattr(event, "content") and event.content:
+                has_call = any(getattr(p, "function_call", None) is not None for p in event.content.parts)
                 for part in event.content.parts:
-                    if getattr(part, "text", None):
-                        final_text_parts.append(part.text)
-                    elif getattr(part, "function_call", None):
+                    if getattr(part, "function_call", None):
                         call = part.function_call
                         tools_used.append(ToolExecutionInfo(
                             tool_name=call.name,
                             args=dict(call.args) if call.args else {},
                             latency_ms=0.0
                         ))
+                    elif getattr(part, "text", None) and not has_call:
+                        final_text_parts.append(part.text)
 
         server_latency_ms = (time.time() - server_start_t) * 1000
         response_text = "".join(final_text_parts)
@@ -305,10 +319,8 @@ async def chat_stream(req: ChatRequest):
 
     runner = Runner(agent=root_agent, session_service=session_service, app_name="carrier_agent_app")
 
-    # Format user prompt with explicit model context if supplied
-    effective_prompt = req.message
-    if req.model_series and req.model_series != "All Models":
-        effective_prompt = f"[Chiller Model: Carrier {req.model_series}]\n{req.message}"
+    # Format user prompt with intelligent model resolution
+    effective_prompt = _determine_effective_prompt(req.message, req.model_series)
 
     async def event_generator():
         tools_used: List[Dict[str, Any]] = []
@@ -325,16 +337,8 @@ async def chat_stream(req: ChatRequest):
                 )
             ):
                 if hasattr(event, "content") and event.content:
+                    has_call = any(getattr(p, "function_call", None) is not None for p in event.content.parts)
                     for part in event.content.parts:
-                        text = getattr(part, "text", None)
-                        if text:
-                            # Rewrite GCS storage URLs to local image proxy on the fly
-                            clean_text = text.replace(
-                                "https://storage.googleapis.com/genai-demos-391416-carrier-assets/",
-                                "http://localhost:8000/api/image/"
-                            )
-                            yield f"data: {json.dumps({'type': 'token', 'content': clean_text})}\n\n"
-
                         call = getattr(part, "function_call", None)
                         if call:
                             t_info = {
@@ -344,6 +348,15 @@ async def chat_stream(req: ChatRequest):
                             }
                             tools_used.append(t_info)
                             yield f"data: {json.dumps({'type': 'tool_call', 'tool_name': call.name})}\n\n"
+
+                        text = getattr(part, "text", None)
+                        if text and not has_call:
+                            # Rewrite GCS storage URLs to local image proxy on the fly
+                            clean_text = text.replace(
+                                "https://storage.googleapis.com/genai-demos-391416-carrier-assets/",
+                                "http://localhost:8000/api/image/"
+                            )
+                            yield f"data: {json.dumps({'type': 'token', 'content': clean_text})}\n\n"
 
             server_duration_ms = round((time.time() - server_start_t) * 1000, 1)
 
