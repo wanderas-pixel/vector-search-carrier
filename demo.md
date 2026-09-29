@@ -126,7 +126,7 @@ Switch to **Tab 1** ([http://localhost:3000](http://localhost:3000)).
    ```
 3. **What to Point Out Live on Screen**:
    * **Instant Token Streaming (TTFT < 1.5s)**: Point out how the text begins streaming across the screen almost immediately, eliminating perceived delay.
-   * **Live Tool Execution Badge**: Show the pill indicator displaying `carrier_alarm_lookup`. The agent dynamically determined that this was a specific alarm code and dispatched the exact targeted tool.
+   * **Live Tool Execution Badge**: Show the pill indicator displaying `carrier_knowledge_search`. The agent dynamically unified dense semantic retrieval and BM25 lexical search with RRF to resolve the exact alarm code and related troubleshooting procedures.
    * **Grounded Diagnostic Precision**: The agent identifies `T051` as a **Compressor A1 Failure Alert** sent from the Compressor Protection Module (CPM) to the Main Base Board (MBB).
    * **Actionable Field Instructions**: It tells the technician the exact secret diagnostic button combination: press **`ENTER` and `ESCAPE` simultaneously** on the Navigator display to view the underlying trip reason.
    * **Strict Citations**: Point out the primary source citation:
@@ -218,7 +218,7 @@ Switch to **Tab 5** (Google Cloud Logging Logs Explorer).
      {
        "service": "carrier-chiller-agent",
        "event_type": "TOOL_INVOCATION_CACHE_HIT",
-       "tool": "carrier_alarm_lookup",
+       "tool": "carrier_knowledge_search",
        "cache_key": "30HX:T051",
        "latency_ms": 0.08,
        "timestamp": 1727214732.1
@@ -233,7 +233,7 @@ Switch to **Tab 5** (Google Cloud Logging Logs Explorer).
        "model_series": "30HX",
        "server_latency_ms": 2423.7,
        "tools_count": 1,
-       "tools_list": ["carrier_alarm_lookup"]
+       "tools_list": ["carrier_knowledge_search"]
      }
      ```
 3. **Key Talking Points**:

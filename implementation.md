@@ -576,7 +576,7 @@ gantt
 2. [x] **`evaluation.md`**: Master evaluation suite and test benchmark covering 14 test cases (TC-01 through TC-14) spanning hybrid search, model isolation, safety compliance, visual search, and end-to-end turnaround latency.
 3. [x] **`extract_and_render_assets.py`**: Parser extracting text, tables, rendering high-res WebP diagrams to GCS (`gs://genai-demos-391416-carrier-assets`), and computing 1408-dim `multimodalembedding@001` vectors across 1,084 data objects.
 4. [x] **`setup_vector_search_2.py`**: Vector Search 2.0 collection provisioning (`carrier-chiller-docs`), dual-vector schema (`gemini-embedding-001` auto text embeddings + 1408-dim visual embeddings), and batch ingestion.
-5. [x] **`carrier-agent/`**: Complete Google ADK 2.0 agent project deployed to **Agent Platform Runtime** (`projects/101296135052/locations/us-central1/reasoningEngines/5108959393542569984`), structured Cloud Logging plugin (`carrier-agent-audit`), and tools (`carrier_knowledge_search`, `carrier_visual_search`, `carrier_alarm_lookup`).
+5. [x] **`carrier-agent/`**: Complete Google ADK 2.0 agent project deployed to **Agent Platform Runtime** (`projects/101296135052/locations/us-central1/reasoningEngines/5108959393542569984`), structured Cloud Logging plugin (`carrier-agent-audit`), and unified tools (`carrier_knowledge_search` [hybrid semantic + BM25 with dynamic RRF & fast-path cache], `carrier_visual_search`).
 6. [x] **`frontend/`**: Complete React 19 + TypeScript + Vite web application on port 3000 featuring request turnaround latency tracking (`performance.now()`), Carrier model filter pills, visual search modal, and schematic lightbox.
 7. [x] **`backend/server.py`**: Production FastAPI server on port 8000 bridging the React UI, ADK 2.0 agent runner, multimodal visual search, and Google Cloud Logging retrieval.
 8. [x] **Verification & Audit Report**: Verified end-to-end against test suite (`evaluation.md`), testing alarms (TC-01), schematics (TC-07), visual search (TC-06), live Cloud Logging telemetry, and sub-second retrieval.
@@ -606,7 +606,7 @@ sequenceDiagram
     Tech->>API: POST /api/chat/stream
     API->>Tech: SSE Event: {"type": "init"} (TTFT Start)
     API->>ADK: runner.run_async(prompt)
-    ADK->>Cache: Tool Call: carrier_alarm_lookup(T051, 30HX)
+    ADK->>Cache: Tool Call: carrier_knowledge_search(T051, 30HX)
     alt Cache Miss
         Cache->>VS: vectorsearch.search_data_objects
         VS-->>Cache: Form 30HX-2T Diagnostic Excerpts (~1,200 ms)

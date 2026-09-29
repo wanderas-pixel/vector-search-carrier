@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Carrier Chiller Assistant - End-to-End Architecture Diagram (Zoomable)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #viewport {
+      cursor: grab;
+      touch-action: none;
+    }
+    #viewport:active {
+      cursor: grabbing;
+    }
+    .node-rect {
+      transition: filter 0.2s ease, stroke 0.2s ease;
+    }
+    .node-rect:hover {
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.18));
+      stroke-width: 2.5px;
+    }
+    .btn-control {
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-control:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .btn-control:active {
+      transform: scale(0.97);
+    }
+    .phase-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen w-screen relative">
+
+  <!-- Top Floating Header & Navigation Toolbar -->
+  <header class="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 bg-slate-800/95 backdrop-blur border border-slate-700/80 rounded-xl px-5 py-3 shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow">
+        VS
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-wide">Carrier Chiller AI Assistant: End-to-End Process</h1>
+        <p class="text-xs text-slate-400">Vector Search 2.0 • Google ADK 2.0 • Agent Platform Runtime • Gemini Flash</p>
+      </div>
+    </div>
+
+    <!-- Quick Focus Phase Buttons -->
+    <div class="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-lg border border-slate-700 text-xs">
+      <button onclick="focusView('all')" class="px-2.5 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">Overview</button>
+      <button onclick="focusView('p1')" class="px-2.5 py-1.5 rounded-md font-medium text-sky-400 hover:bg-sky-950/60 transition">Phase 1: Ingestion</button>
+      <button onclick="focusView('p2')" class="px-2.5 py-1.5 rounded-md font-medium text-emerald-400 hover:bg-emerald-950/60 transition">Phase 2: Agent Deploy</button>
+      <button onclick="focusView('p3')" class="px-2.5 py-1.5 rounded-md font-medium text-amber-400 hover:bg-amber-950/60 transition">Phase 3: Runtime Loop</button>
+    </div>
+
+    <!-- Pan & Zoom Control Buttons -->
+    <div class="flex items-center gap-2">
+      <button onclick="zoomBy(1.25)" class="btn-control" title="Zoom In (+)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Zoom In</span>
+      </button>
+      <button onclick="zoomBy(0.8)" class="btn-control" title="Zoom Out (-)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Zoom Out</span>
+      </button>
+      <button onclick="resetZoom()" class="btn-control" title="Reset View">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        <span>Reset</span>
+      </button>
+      <span id="zoom-indicator" class="text-xs font-mono font-semibold text-slate-300 bg-slate-900 border border-slate-700 px-2 py-1 rounded">100%</span>
+    </div>
+  </header>
+
+  <!-- Interactive Hint Card -->
+  <div class="absolute bottom-4 left-4 z-20 pointer-events-none bg-slate-800/90 border border-slate-700 px-3 py-2 rounded-lg text-xs text-slate-400 shadow flex items-center gap-2">
+    <span>💡 <b>Mouse Wheel</b> to zoom at cursor • <b>Click & Drag</b> to pan • <b>Presets</b> above</span>
+  </div>
+
+  <!-- SVG Pan/Zoom Canvas Viewport -->
+  <div id="viewport-container" class="w-full h-full overflow-hidden bg-slate-950 relative">
+    <svg id="viewport" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Marker Arrows -->
+        <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+        </marker>
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+        </marker>
+        <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#fbbf24"/>
+        </marker>
+        <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#c084fc"/>
+        </marker>
+
+        <!-- Drop Shadows -->
+        <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
+        </filter>
+      </defs>
+
+      <!-- Zoomable Root Group -->
+      <g id="scene" transform="matrix(1 0 0 1 0 0)">
+
+        <!-- ======================================================== -->
+        <!-- PHASE 1: OFFLINE INGESTION & VECTOR SEARCH 2.0 PIPELINE  -->
+        <!-- ======================================================== -->
+        <g id="group-phase1">
+          <!-- Phase Container Box -->
+          <rect x="50" y="80" width="480" height="920" rx="16" fill="#0f172a" stroke="#1e3a8a" stroke-width="2" filter="url(#shadow)"/>
+          <rect x="50" y="80" width="480" height="48" rx="16" fill="#1e3a8a" opacity="0.4"/>
+          <text x="70" y="110" font-size="16" font-weight="700" fill="#60a5fa">PHASE 1: Offline Ingestion & Asset Pipeline</text>
+          <text x="70" y="124" font-size="11" fill="#93c5fd">Document Parsing • 300 DPI Rasterization • Dual-Vector Schema</text>
+
+          <!-- Node: Manuals -->
+          <g transform="translate(80, 150)">
+            <rect class="node-rect" width="420" height="85" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="20" y="32" font-size="15" font-weight="700" fill="#f8fafc">📚 5 Carrier Service Manuals</text>
+            <text x="20" y="54" font-size="12" fill="#cbd5e1">19XR (Centrifugal), 23XRV (Screw), 30HX, 30RC, 30XV</text>
+            <text x="20" y="70" font-size="11" fill="#94a3b8">858 Pages Total • High-Voltage Schematics & Fault Tables</text>
+          </g>
+
+          <!-- Arrow -->
+          <line x1="290" y1="235" x2="290" y2="265" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+          <!-- Node: Parsing Engine -->
+          <g transform="translate(80, 265)">
+            <rect class="node-rect" width="420" height="90" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="20" y="30" font-size="15" font-weight="700" fill="#f8fafc">⚙️ extract_and_render_assets.py Engine</text>
+            <text x="20" y="52" font-size="12" fill="#93c5fd">• pypdf: Hierarchical text chunks & section headers</text>
+            <text x="20" y="70" font-size="12" fill="#93c5fd">• pypdfium2: 300 DPI high-resolution diagram rasterizer</text>
+          </g>
+
+          <!-- Split Arrows -->
+          <line x1="185" y1="355" x2="185" y2="395" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+          <line x1="395" y1="355" x2="395" y2="395" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+          <!-- Node: Text Chunks -->
+          <g transform="translate(80, 395)">
+            <rect class="node-rect" width="200" height="80" rx="10" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+            <text x="15" y="30" font-size="14" font-weight="700" fill="#f8fafc">📝 Text Chunks</text>
+            <text x="15" y="50" font-size="11" fill="#cbd5e1">Fault Code Tables &</text>
+            <text x="15" y="66" font-size="11" fill="#cbd5e1">Step-by-Step Procedures</text>
+          </g>
+
+          <!-- Node: 154 Diagrams -->
+          <g transform="translate(300, 395)">
+            <rect class="node-rect" width="200" height="80" rx="10" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+            <text x="15" y="30" font-size="14" font-weight="700" fill="#f8fafc">🖼️ 154 Schematics</text>
+            <text x="15" y="50" font-size="11" fill="#cbd5e1">300 DPI WebP Format</text>
+            <text x="15" y="66" font-size="11" fill="#cbd5e1">Wiring & Board Pinouts</text>
+          </g>
+
+          <!-- Branch to GCS -->
+          <line x1="400" y1="475" x2="400" y2="515" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+          <!-- Node: GCS Storage -->
+          <g transform="translate(240, 515)">
+            <rect class="node-rect" width="260" height="85" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+            <text x="15" y="28" font-size="14" font-weight="700" fill="#f8fafc">☁️ Google Cloud Storage</text>
+            <text x="15" y="48" font-size="11" fill="#93c5fd">gs://genai-demos-391416-carrier-assets</text>
+            <text x="15" y="66" font-size="11" fill="#cbd5e1">CDN Headers: max-age=86400 (WebP)</text>
+          </g>
+
+          <!-- Node: Multimodal Embedding -->
+          <g transform="translate(80, 515)">
+            <rect class="node-rect" width="150" height="85" rx="10" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
+            <text x="12" y="26" font-size="13" font-weight="700" fill="#c7d2fe">🧠 Vertex AI</text>
+            <text x="12" y="45" font-size="11" fill="#a5b4fc">multimodal-</text>
+            <text x="12" y="60" font-size="11" fill="#a5b4fc">embedding@001</text>
+            <text x="12" y="74" font-size="10" fill="#818cf8">1,408-dim Visual</text>
+          </g>
+
+          <line x1="155" y1="600" x2="220" y2="635" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+          <line x1="370" y1="600" x2="310" y2="635" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+          <!-- Node: JSONL Dataset -->
+          <g transform="translate(80, 635)">
+            <rect class="node-rect" width="420" height="80" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="20" y="28" font-size="14" font-weight="700" fill="#f8fafc">📄 carrier_documents.jsonl (1,084 Objects)</text>
+            <text x="20" y="48" font-size="11" fill="#cbd5e1">Combined Text Chunks + 1,408-dim Visual Embeddings + GCS URLs</text>
+            <text x="20" y="66" font-size="11" fill="#94a3b8">Metadata: model_series, form_number, section, page_number</text>
+          </g>
+
+          <line x1="290" y1="715" x2="290" y2="750" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+          <!-- Node: Vector Search 2.0 Collection -->
+          <g transform="translate(80, 750)">
+            <rect class="node-rect" width="420" height="120" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="20" y="32" font-size="15" font-weight="700" fill="#38bdf8">⚡ Vector Search 2.0 Collection</text>
+            <text x="20" y="52" font-size="12" fill="#f8fafc">Collection: projects/.../carrier-chiller-docs</text>
+            <text x="20" y="70" font-size="11" fill="#93c5fd">✓ Instant kNN: Zero index deployment delay</text>
+            <text x="20" y="86" font-size="11" fill="#93c5fd">✓ Dual Vector: 768-dim text (server-side) + 1,408-dim vision</text>
+            <text x="20" y="102" font-size="11" fill="#93c5fd">✓ Hybrid RRF: Blends Dense Semantic + BM25 Lexical Keyword</text>
+          </g>
+
+          <!-- Auto-embed note -->
+          <g transform="translate(80, 885)">
+            <rect width="420" height="35" rx="6" fill="#172554" stroke="#1d4ed8"/>
+            <text x="15" y="22" font-size="11" fill="#93c5fd">⚙️ Server-side auto-embedding: gemini-embedding-001 (768-dim)</text>
+          </g>
+        </g>
+
+        <!-- ======================================================== -->
+        <!-- PHASE 2: AGENT DEPLOYMENT & GOVERNANCE                   -->
+        <!-- ======================================================== -->
+        <g id="group-phase2">
+          <!-- Phase Container Box -->
+          <rect x="570" y="80" width="420" height="920" rx="16" fill="#062e1e" stroke="#047857" stroke-width="2" filter="url(#shadow)"/>
+          <rect x="570" y="80" width="420" height="48" rx="16" fill="#047857" opacity="0.4"/>
+          <text x="590" y="110" font-size="16" font-weight="700" fill="#34d399">PHASE 2: Agent Architecture & Governance</text>
+          <text x="590" y="124" font-size="11" fill="#a7f3d0">Google ADK 2.0 • Reasoning Engine • Enterprise Registry</text>
+
+          <!-- Node: ADK Code -->
+          <g transform="translate(600, 150)">
+            <rect class="node-rect" width="360" height="100" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+            <text x="20" y="30" font-size="15" font-weight="700" fill="#ecfdf5">🤖 Google ADK 2.0 Agent</text>
+            <text x="20" y="50" font-size="12" fill="#a7f3d0">carrier-agent/app/agent.py</text>
+            <text x="20" y="70" font-size="11" fill="#6ee7b7">Model: gemini-3.8-flash (Reasoning Core)</text>
+            <text x="20" y="88" font-size="11" fill="#6ee7b7">Prompt: Specialized HVAC Chiller Master Diagnostician</text>
+          </g>
+
+          <line x1="780" y1="250" x2="780" y2="285" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+          <!-- Node: Tools -->
+          <g transform="translate(600, 285)">
+            <rect class="node-rect" width="360" height="150" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+            <text x="20" y="30" font-size="14" font-weight="700" fill="#ecfdf5">🛠️ Unified Agentic Tool Suite (tools.py)</text>
+            <text x="20" y="55" font-size="12" font-weight="600" fill="#34d399">1. carrier_knowledge_search(query, model)</text>
+            <text x="35" y="72" font-size="11" fill="#a7f3d0">Unified Hybrid: Semantic + BM25 Lexical + Alarm Cache</text>
+            <text x="20" y="94" font-size="12" font-weight="600" fill="#34d399">2. carrier_visual_search(desc, model)</text>
+            <text x="35" y="111" font-size="11" fill="#a7f3d0">Multimodal schematic & wiring diagram retrieval</text>
+            <text x="20" y="131" font-size="11" fill="#6ee7b7">Dynamic RRF: auto-boosts BM25 when alarm code detected</text>
+          </g>
+
+          <line x1="780" y1="435" x2="780" y2="475" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+          <!-- Node: Vertex AI Reasoning Engine -->
+          <g transform="translate(600, 475)">
+            <rect class="node-rect" width="360" height="110" rx="10" fill="#064e3b" stroke="#34d399" stroke-width="2"/>
+            <text x="20" y="32" font-size="15" font-weight="700" fill="#ecfdf5">☁️ Agent Platform Runtime</text>
+            <text x="20" y="52" font-size="12" fill="#a7f3d0">Vertex AI Reasoning Engine Resource:</text>
+            <text x="20" y="70" font-size="11" font-family="monospace" fill="#6ee7b7">reasoningEngines/5108959393542569984</text>
+            <text x="20" y="92" font-size="11" fill="#34d399">Managed serverless container with stateful session tracking</text>
+          </g>
+
+          <line x1="780" y1="585" x2="780" y2="625" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+          <!-- Node: Gemini Enterprise Agent Registry -->
+          <g transform="translate(600, 625)">
+            <rect class="node-rect" width="360" height="95" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+            <text x="20" y="30" font-size="14" font-weight="700" fill="#ecfdf5">🏛️ Gemini Enterprise Agent Registry</text>
+            <text x="20" y="52" font-size="11" fill="#a7f3d0">• Enterprise Service Cataloging & Discovery</text>
+            <text x="20" y="68" font-size="11" fill="#a7f3d0">• Semantic Versioning & Rollback Control</text>
+            <text x="20" y="84" font-size="11" fill="#a7f3d0">• IAM Role-Based Access Governance & Policies</text>
+          </g>
+
+          <!-- Governance Info Box -->
+          <g transform="translate(600, 750)">
+            <rect width="360" height="170" rx="10" fill="#022c22" stroke="#059669"/>
+            <text x="20" y="30" font-size="13" font-weight="700" fill="#34d399">🔒 Safety & Isolation Guardrails</text>
+            <text x="20" y="54" font-size="11" fill="#a7f3d0">✓ Model Filter Guardrail:</text>
+            <text x="35" y="70" font-size="10" fill="#6ee7b7">model_series must equal active technician selection</text>
+            <text x="20" y="94" font-size="11" fill="#a7f3d0">✓ Cross-Model Hallucination Prevention:</text>
+            <text x="35" y="110" font-size="10" fill="#6ee7b7">Prevents 19XR centrifugal wiring on 30HX screw chillers</text>
+            <text x="20" y="134" font-size="11" fill="#a7f3d0">✓ Grounding Integrity:</text>
+            <text x="35" y="150" font-size="10" fill="#6ee7b7">Every recommendation tagged with exact Manual & Page #</text>
+          </g>
+        </g>
+
+        <!-- ======================================================== -->
+        <!-- PHASE 3: CUSTOMER & TECHNICIAN RUNTIME DIAGNOSTIC LOOP   -->
+        <!-- ======================================================== -->
+        <g id="group-phase3">
+          <!-- Phase Container Box -->
+          <rect x="1030" y="80" width="620" height="920" rx="16" fill="#1c1917" stroke="#b45309" stroke-width="2" filter="url(#shadow)"/>
+          <rect x="1030" y="80" width="620" height="48" rx="16" fill="#78350f" opacity="0.4"/>
+          <text x="1050" y="110" font-size="16" font-weight="700" fill="#fbbf24">PHASE 3: Customer & Technician Query Runtime</text>
+          <text x="1050" y="124" font-size="11" fill="#fde68a">Sub-2s Real-Time Streaming • In-Memory LRU Cache • Inline 300 DPI Schematics</text>
+
+          <!-- Field Technician -->
+          <g transform="translate(1060, 150)">
+            <rect class="node-rect" width="260" height="95" rx="10" fill="#292524" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="15" y="28" font-size="14" font-weight="700" fill="#fef3c7">👷 Field Technician</text>
+            <text x="15" y="48" font-size="11" fill="#e7e5e4">Mobile or Workstation Browser</text>
+            <text x="15" y="66" font-size="11" fill="#fde68a">1. Clicks Model Pill (e.g. 30HX)</text>
+            <text x="15" y="82" font-size="11" fill="#fde68a">2. Inputs Query or Snaps Photo</text>
+          </g>
+
+          <!-- Arrow to UI -->
+          <line x1="1320" y1="197" x2="1360" y2="197" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+
+          <!-- React 19 Frontend -->
+          <g transform="translate(1360, 150)">
+            <rect class="node-rect" width="260" height="95" rx="10" fill="#292524" stroke="#38bdf8" stroke-width="1.5"/>
+            <text x="15" y="28" font-size="14" font-weight="700" fill="#38bdf8">💻 React 19 Frontend</text>
+            <text x="15" y="48" font-size="11" fill="#e7e5e4">Vite + TypeScript + TailwindCSS</text>
+            <text x="15" y="66" font-size="11" fill="#93c5fd">Sub-millisecond token rendering</text>
+            <text x="15" y="82" font-size="11" fill="#93c5fd">Inline Edge-to-Edge WebP Lightbox</text>
+          </g>
+
+          <!-- Arrow UI to API -->
+          <line x1="1490" y1="245" x2="1490" y2="280" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+
+          <!-- FastAPI Backend Gateway -->
+          <g transform="translate(1060, 280)">
+            <rect class="node-rect" width="560" height="90" rx="10" fill="#292524" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="20" y="30" font-size="15" font-weight="700" fill="#fef3c7">⚡ FastAPI Backend Gateway (POST /api/chat/stream)</text>
+            <text x="20" y="52" font-size="12" fill="#e7e5e4">Server-Sent Events (SSE) Streaming Pipeline • TTFT: ~1.4s</text>
+            <text x="20" y="72" font-size="11" fill="#fde68a">Fast-path in-memory routing + asynchronous telemetry emission</text>
+          </g>
+
+          <line x1="1340" y1="370" x2="1340" y2="405" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+
+          <!-- In-Memory LRU Cache -->
+          <g transform="translate(1060, 405)">
+            <rect class="node-rect" width="560" height="85" rx="10" fill="#451a03" stroke="#d97706" stroke-width="2"/>
+            <text x="20" y="28" font-size="14" font-weight="700" fill="#fef3c7">⚡ High-Speed In-Memory LRU Cache (_ALARM_CACHE / _VISUAL_CACHE)</text>
+            <text x="20" y="48" font-size="12" fill="#fde68a">Cache Hit: &lt;1ms instant return (bypasses LLM tool latency completely)</text>
+            <text x="20" y="66" font-size="11" fill="#fed7aa">Cache Miss: Passes seamlessly to ADK Runner & Gemini Flash reasoning engine</text>
+          </g>
+
+          <line x1="1340" y1="490" x2="1340" y2="525" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+
+          <!-- ADK Runner & Gemini Core -->
+          <g transform="translate(1060, 525)">
+            <rect class="node-rect" width="560" height="115" rx="10" fill="#292524" stroke="#10b981" stroke-width="1.5"/>
+            <text x="20" y="28" font-size="14" font-weight="700" fill="#ecfdf5">🧠 Google ADK Runner + Gemini 3.8 Flash</text>
+            <text x="20" y="48" font-size="12" fill="#a7f3d0">1. InMemorySessionService evaluates multi-turn conversational context</text>
+            <text x="20" y="66" font-size="12" fill="#a7f3d0">2. Emits typed function_call (e.g. carrier_knowledge_search or visual_search)</text>
+            <text x="20" y="86" font-size="12" fill="#6ee7b7">3. Queries Vector Search 2.0 with strict model_series == "30HX" filter</text>
+            <text x="20" y="104" font-size="11" fill="#34d399">4. RRF blends BM25 lexical match + 768-dim semantic dense vectors</text>
+          </g>
+
+          <line x1="1340" y1="640" x2="1340" y2="675" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+
+          <!-- Response Streaming & Inline Schematic -->
+          <g transform="translate(1060, 675)">
+            <rect class="node-rect" width="560" height="110" rx="10" fill="#1c1917" stroke="#38bdf8" stroke-width="2"/>
+            <text x="20" y="28" font-size="14" font-weight="700" fill="#38bdf8">🚀 SSE Stream & Edge-to-Edge Inline Diagram Presentation</text>
+            <text x="20" y="50" font-size="12" fill="#f8fafc">• Real-time token streaming to React frontend (chunks yielded instantly)</text>
+            <text x="20" y="70" font-size="12" fill="#93c5fd">• Verified citation badge: [Manual: Form 30HX-2T, Page 42]</text>
+            <text x="20" y="90" font-size="12" fill="#fde68a">• 300 DPI WebP Schematic rendered inline (Zero-click needed!)</text>
+          </g>
+
+          <!-- Audit Logging Box -->
+          <g transform="translate(1060, 810)">
+            <rect width="560" height="85" rx="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+            <text x="20" y="26" font-size="13" font-weight="700" fill="#c7d2fe">📊 Google Cloud Logging & Enterprise Telemetry</text>
+            <text x="20" y="46" font-size="11" fill="#e0e7ff">Logs: carrier-agent-audit & carrier-api-server (projects/genai-demos-391416)</text>
+            <text x="20" y="64" font-size="11" fill="#a5b4fc">Captures: Turn Latencies, Token Counts, Cache Hit/Miss, Tool Calls, Filter Audits</text>
+          </g>
+        </g>
+
+        <!-- ======================================================== -->
+        <!-- CROSS-PHASE CONNECTORS (BRIDGING ARROWS)                -->
+        <!-- ======================================================== -->
+        <!-- VS 2.0 Collection -> Tool Execution in Phase 3 -->
+        <path d="M 500 810 Q 780 840 1060 600" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrow-blue)"/>
+        <text x="730" y="760" font-size="11" font-weight="700" fill="#38bdf8" transform="rotate(-15 730 760)">VS 2.0 Agent Retrieval Query</text>
+
+        <!-- GCS -> React Frontend Inline Images -->
+        <path d="M 500 550 Q 950 510 1360 210" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-blue)"/>
+        <text x="880" y="460" font-size="11" font-weight="600" fill="#93c5fd">Stream 300 DPI WebP Asset</text>
+
+      </g>
+    </svg>
+  </div>
+
+  <script>
+    const scene = document.getElementById('scene');
+    const viewport = document.getElementById('viewport');
+    const zoomIndicator = document.getElementById('zoom-indicator');
+
+    let scale = 0.95;
+    let translateX = 30;
+    let translateY = 20;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    function updateTransform() {
+      scene.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${translateX} ${translateY})`);
+      zoomIndicator.textContent = `${Math.round(scale * 100)}%`;
+    }
+
+    function zoomBy(factor, cx, cy) {
+      const rect = viewport.getBoundingClientRect();
+      const pointerX = cx !== undefined ? cx - rect.left : rect.width / 2;
+      const pointerY = cy !== undefined ? cy - rect.top : rect.height / 2;
+
+      const newScale = Math.min(Math.max(scale * factor, 0.35), 4.0);
+      const actualFactor = newScale / scale;
+
+      translateX = pointerX - (pointerX - translateX) * actualFactor;
+      translateY = pointerY - (pointerY - translateY) * actualFactor;
+      scale = newScale;
+
+      updateTransform();
+    }
+
+    function resetZoom() {
+      scale = 0.95;
+      translateX = 30;
+      translateY = 20;
+      updateTransform();
+    }
+
+    function focusView(phase) {
+      if (phase === 'all') {
+        scale = 0.95;
+        translateX = 30;
+        translateY = 20;
+      } else if (phase === 'p1') {
+        scale = 1.35;
+        translateX = 20;
+        translateY = -50;
+      } else if (phase === 'p2') {
+        scale = 1.35;
+        translateX = -620;
+        translateY = -50;
+      } else if (phase === 'p3') {
+        scale = 1.25;
+        translateX = -1150;
+        translateY = -50;
+      }
+      updateTransform();
+    }
+
+    // Mouse Drag Pan
+    viewport.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX - translateX;
+      startY = e.clientY - translateY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Mouse Wheel Zoom at cursor position
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      zoomBy(factor, e.clientX, e.clientY);
+    }, { passive: false });
+
+    // Initial positioning
+    updateTransform();
+  </script>
+</body>
+</html>

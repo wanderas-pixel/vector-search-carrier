@@ -30,38 +30,106 @@ This project implements an enterprise-grade **Multimodal Field Specialist AI Ass
 
 ```mermaid
 flowchart TD
-    subgraph Client Tier [Field Technician Surface]
-        UI["React 19 Web App (Vite + TypeScript)<br/>Port: 3000 | SSE Streaming Reader"]
-        UI -->|POST /api/chat/stream| API["FastAPI Backend Service<br/>Port: 8000 | Server-Sent Events"]
-        UI -->|Direct Inline Image URL| Proxy["Authenticated Image Proxy<br/>/api/image/{diagram_name}"]
-    end
-
-    subgraph Backend Orchestration Tier [FastAPI & Google ADK 2.0]
-        API --> Session["ADK InMemorySessionService<br/>(User: field_engineer | Multi-Turn Memory)"]
-        API --> Cache["In-Memory LRU Cache<br/>(_ALARM_CACHE, _VISUAL_CACHE, _EMBEDDING_CACHE)"]
-        API --> Runner["ADK Runner (App: carrier_agent_app)"]
-        Runner --> Agent["Carrier Chiller Specialist Agent<br/>(Model: Gemini Flash)"]
-        Agent --> ToolRouter{"ADK Tool Router"}
-    end
-
-    subgraph Data & Agent Retrieval Tier [Google Cloud Infrastructure]
-        ToolRouter -->|carrier_knowledge_search| VS2["Vector Search 2.0 Collection<br/>(carrier-chiller-docs)"]
-        ToolRouter -->|carrier_alarm_lookup| VS2
-        ToolRouter -->|carrier_visual_search| MM["Vertex AI Multimodal Embeddings<br/>(multimodalembedding@001, 1408-dim)"]
-        MM --> VS2
+    %% ========================================================
+    %% PHASE 1: INGESTION & DATA PREPARATION PIPELINE
+    %% ========================================================
+    subgraph Phase1 ["Phase 1: Ingestion & Asset Processing (Offline Pipeline)"]
+        direction TB
+        PDFs["Input Sources: 5 Official Carrier PDFs<br/>(19XR, 23XRV, 30HX, 30RC, 30XV | 858 Pages Total)"]
         
-        GCS["Cloud Storage Bucket<br/>gs://genai-demos-391416-carrier-assets<br/>(154 WebP Diagrams @ 300 DPI)"]
-        Proxy --> GCS
+        Parser["extract_and_render_assets.py Engine"]
+        PDFs --> Parser
+        
+        Parser -->|"pypdf text extraction & section tracking"| Chunks["Text Chunks & Troubleshooting Tables"]
+        Parser -->|"pypdfium2 @ 300 DPI rasterization"| Diagrams["154 High-Res Schematics & Wiring Diagrams"]
+        
+        Diagrams -->|"Upload with CDN cache headers"| GCS["Google Cloud Storage<br/>gs://genai-demos-391416-carrier-assets/*.webp"]
+        
+        Diagrams -->|"Vertex AI SDK: multimodalembedding@001"| MMEmbed["Generate 1,408-dim Visual Dense Vectors"]
+        
+        Chunks --> JSONL["carrier_documents.jsonl<br/>(1,084 Schema-Validated Data Objects)"]
+        MMEmbed --> JSONL
+        GCS -->|"Inject public/signed image URLs"| JSONL
+        
+        Setup["setup_vector_search_2.py Engine"]
+        JSONL --> Setup
+        
+        Setup -->|"Provision Collection with DATA_SCHEMA & VECTOR_SCHEMA"| VS2["Vector Search 2.0 Collection<br/>projects/.../collections/carrier-chiller-docs"]
+        Setup -->|"BatchCreateDataObjects (Instant kNN, zero wait)"| VS2
+        
+        AutoEmbed["Server-Side gemini-embedding-001<br/>(768-dim auto-embed via text_template)"]
+        VS2 --- AutoEmbed
     end
 
-    subgraph Enterprise Governance & Observability [Google Cloud Platform]
-        Agent -.->|Deployed & Managed| APR["Agent Platform Runtime<br/>(Reasoning Engine: 5108959393542569984)"]
-        APR -.->|Registered & Governed| AR["Gemini Enterprise Agent Registry"]
+    %% ========================================================
+    %% PHASE 2: AGENT DEPLOYMENT & GOVERNANCE
+    %% ========================================================
+    subgraph Phase2 ["Phase 2: Agent Deployment & Governance (Google Cloud Platform)"]
+        direction TB
+        AgentDef["Google ADK 2.0 Agent Definition<br/>(carrier-agent/app/agent.py | Gemini Flash)"]
         
-        API -->|Audit Logs| Logging["Google Cloud Logging<br/>(carrier-agent-audit & carrier-api-server)"]
-        ToolRouter -->|TOOL_INVOCATION_CACHE_HIT| Logging
-        Logging --> BQ["BigQuery Agent Analytics (Fleet SLA Auditing)"]
+        ToolsDef["Agent Tool Definitions (tools.py):<br/>• carrier_knowledge_search (Unified Semantic + Lexical BM25)<br/>• carrier_visual_search (Multimodal Schematics)"]
+        AgentDef --- ToolsDef
+        
+        AgentDef -->|"Deploy Reasoner"| APR["Vertex AI Reasoning Engine<br/>reasoningEngines/5108959393542569984"]
+        APR -->|"Catalog & Enforce Policies"| Registry["Gemini Enterprise Agent Registry"]
     end
+
+    %% ========================================================
+    %% PHASE 3: CUSTOMER & FIELD TECHNICIAN QUERY RUNTIME
+    %% ========================================================
+    subgraph Phase3 ["Phase 3: Customer & Technician Query Runtime (Online / Real-Time)"]
+        direction TB
+        Tech["Field Technician / Customer<br/>(Mobile or Workstation Browser)"]
+        
+        UI["React 19 Frontend Web App<br/>(http://localhost:3000 | Vite + TypeScript)"]
+        Tech -->|"1. Selects Chiller Model Pill (e.g. 30HX)<br/>2. Enters Query: 'What is alarm T051?'"| UI
+        
+        API["FastAPI Backend Service<br/>(http://localhost:8000/api/chat/stream)"]
+        UI -->|"POST /api/chat/stream (SSE Request)"| API
+        
+        Cache{"In-Memory LRU Cache<br/>(_ALARM_CACHE / _VISUAL_CACHE)"}
+        API --> Cache
+        
+        Cache -->|"Cache Hit (<1ms)"| HitReturn["Fast-Path Cached Tool Result"]
+        Cache -->|"Cache Miss"| ADKRunner["ADK Runner & InMemorySessionService<br/>(Tracks Multi-Turn Conversational Memory)"]
+        
+        ADKRunner --> GeminiCore["Gemini Flash Reasoning Core<br/>(System Instructions & Velocity Rule 6)"]
+        
+        GeminiCore -->|"Evaluates intent & emits function_call"| ToolRouter{"Tool Router"}
+        
+        ToolRouter -->|"Fault codes, Procedures & Specs"| T1["carrier_knowledge_search(query, model)"]
+        ToolRouter -->|"Wiring / Schematic request"| T2["carrier_visual_search(model, visual_query)"]
+        
+        T1 & T2 --> QueryVS2["Agent Retrieval Query API<br/>(vectorsearch.googleapis.com)"]
+        
+        subgraph EngineSearch ["In-Engine Vector Search 2.0 Execution"]
+            direction TB
+            QueryVS2 --> S1["Server-side query auto-embedding (task_type=QUESTION_ANSWERING)"]
+            QueryVS2 --> S2["Lexical inverted-index matching (BM25 exact token search)"]
+            QueryVS2 --> S3["Metadata filter enforcement (model_series == '30HX')"]
+            
+            S1 & S2 --> RRF["Reciprocal Rank Fusion (RRF) Blending<br/>Weights: [1.0, 1.0] | Smoothing k=60"]
+            S3 --> RRF
+        end
+        
+        RRF --> MatchPayload["Grounded Manual Excerpts & Diagram URLs"]
+        HitReturn --> MatchPayload
+        MatchPayload --> GeminiCore
+        
+        GeminiCore -->|"Synthesizes concise answer with citations"| SSEStream["Server-Sent Events (SSE) Token Stream<br/>(Time-To-First-Token: ~1.4s)"]
+        
+        SSEStream -->|"Yields chunks: data: {'type': 'token', ...}"| UI
+        
+        UI --> Display["Rich Grounded Diagnostic Presentation:<br/>• Real-time streaming markdown text<br/>• Edge-to-edge inline WebP schematics (Zero-click)<br/>• Verified page citations: [Form 30HX-2T, Page 42]<br/>• Latency badge & tool audit indicator"]
+        
+        API -.->|"Async JSON Telemetry (latency, tokens, cache hits)"| CloudLog["Google Cloud Logging<br/>(carrier-agent-audit & carrier-api-server)"]
+    end
+
+    %% Inter-phase linkages
+    VS2 -.->|"Bound as primary retrieval source"| ToolsDef
+    APR -.->|"Powers cloud runtime instance"| ADKRunner
+    GCS -.->|"Image proxy stream /api/image/{name}"| Display
 ```
 
 ---

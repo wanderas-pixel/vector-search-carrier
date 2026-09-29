@@ -1,9 +1,9 @@
 """
 Carrier Chiller Engineering Agent Tools.
 Provides Agent Retrieval tools powered by Google Cloud Vector Search 2.0:
-- carrier_knowledge_search (Hybrid search + RRF)
+- carrier_knowledge_search (Unified Hybrid search: dense semantic + BM25 lexical with dynamic RRF ranking & alarm fast-path)
 - carrier_visual_search (Multimodal visual vector search)
-- carrier_alarm_lookup (Targeted diagnostic alarm resolution)
+- carrier_alarm_lookup (Legacy alias delegating to carrier_knowledge_search)
 
 All tools emit structured JSON audit telemetry to Google Cloud Logging.
 """
@@ -11,6 +11,7 @@ All tools emit structured JSON audit telemetry to Google Cloud Logging.
 import os
 import time
 import json
+import re
 from typing import Optional, List, Dict, Any
 
 from google.cloud import vectorsearch_v1beta
@@ -68,11 +69,12 @@ def _log_audit(event_type: str, details: Dict[str, Any], severity: str = "INFO")
 
 
 def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5) -> str:
-    """Performs hybrid search (semantic + full-text with RRF ranking) across Carrier engineering manuals.
+    """Performs unified hybrid search (dense semantic + BM25 lexical with dynamic RRF ranking) across Carrier manuals.
+    Handles general engineering questions, troubleshooting, maintenance steps, AND exact fault/alarm codes (e.g. T051, A036, 014, P101).
 
     Args:
-        query: Technical question, maintenance procedure, wiring check, or specification.
-        model_series: Optional model filter ('19XR', '23XRV', '30HX', '30RC', '30XV'). Always specify if the user mentions equipment.
+        query: Technical question, fault/alarm code, maintenance procedure, wiring check, or specification.
+        model_series: Optional model filter ('19XR', '23XRV', '30HX', '30RC', '30XV'). Always specify if equipment is known.
         top_k: Number of relevant sections to retrieve (default: 5).
 
     Returns:
@@ -82,13 +84,33 @@ def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5)
     model_series = model_series.strip().upper() if model_series else ""
     filt = {"model_series": {"$eq": model_series}} if model_series else None
 
-    # Check In-Memory Cache
+    # Detect if query specifies an alarm code (e.g. 'T051', 'A036', '014', 'P101')
+    alarm_tokens = re.findall(r'\b([A-Z]?\d{2,4}[A-Z]?)\b', query.upper())
+    known_models = {"19XR", "23XRV", "30HX", "30RC", "30XV", "06N", "06NA", "06NW"}
+    valid_alarms = [c for c in alarm_tokens if c not in known_models and not (len(c) == 4 and c.startswith("20"))]
+    detected_alarm = valid_alarms[0] if valid_alarms else None
+
+    # 1. Fast-path In-Memory Alarm Cache (<1ms)
+    if detected_alarm and model_series:
+        alarm_cache_key = f"{model_series}:{detected_alarm}"
+        if alarm_cache_key in _ALARM_CACHE:
+            latency_ms = (time.time() - start_time) * 1000
+            _log_audit("TOOL_INVOCATION_CACHE_HIT", {
+                "tool": "carrier_knowledge_search",
+                "cache_type": "alarm_fast_path",
+                "cache_key": alarm_cache_key,
+                "latency_ms": round(latency_ms, 2)
+            })
+            return _ALARM_CACHE[alarm_cache_key]
+
+    # 2. General Knowledge Cache Check
     clean_query = query.strip().lower()
     cache_key = f"{model_series}:{clean_query}:{top_k}"
     if cache_key in _KNOWLEDGE_CACHE:
         latency_ms = (time.time() - start_time) * 1000
         _log_audit("TOOL_INVOCATION_CACHE_HIT", {
             "tool": "carrier_knowledge_search",
+            "cache_type": "knowledge_cache",
             "cache_key": cache_key,
             "latency_ms": round(latency_ms, 2)
         })
@@ -98,10 +120,14 @@ def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5)
         "tool": "carrier_knowledge_search",
         "query": query,
         "model_series": model_series,
+        "detected_alarm": detected_alarm,
         "top_k": top_k
     })
 
     try:
+        # Dynamically bias RRF weights: if an alarm code is present, boost BM25 lexical weight
+        rrf_weights = [0.8, 2.0] if detected_alarm else [1.0, 1.0]
+
         searches = [
             vectorsearch_v1beta.Search(
                 semantic_search=vectorsearch_v1beta.SemanticSearch(
@@ -117,7 +143,7 @@ def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5)
             ),
             vectorsearch_v1beta.Search(
                 text_search=vectorsearch_v1beta.TextSearch(
-                    search_text=query,
+                    search_text=detected_alarm or query,
                     data_field_names=["content"],
                     filter=filt,
                     top_k=top_k,
@@ -133,7 +159,7 @@ def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5)
             searches=searches,
             combine=vectorsearch_v1beta.BatchSearchDataObjectsRequest.CombineResultsOptions(
                 ranker=vectorsearch_v1beta.Ranker(
-                    rrf=vectorsearch_v1beta.ReciprocalRankFusion(weights=[1.0, 1.0])
+                    rrf=vectorsearch_v1beta.ReciprocalRankFusion(weights=rrf_weights)
                 )
             )
         )
@@ -167,14 +193,20 @@ def carrier_knowledge_search(query: str, model_series: str = "", top_k: int = 5)
             "tool": "carrier_knowledge_search",
             "latency_ms": latency_ms,
             "results_found": len(results),
-            "citations": citations
+            "citations": citations,
+            "rrf_weights": rrf_weights
         })
 
         if not results:
+            if detected_alarm:
+                return f"Alarm code '{detected_alarm}' not found in Carrier {model_series or 'documentation'}. Please verify the code or check if it applies to another model."
             return f"No documentation found in Carrier knowledge base for query: '{query}' (Filter: {model_series or 'None'})."
 
         output_str = "\n\n".join(results)
         _KNOWLEDGE_CACHE[cache_key] = output_str
+        if detected_alarm and model_series:
+            _ALARM_CACHE[f"{model_series}:{detected_alarm}"] = output_str
+
         return output_str
 
     except Exception as e:
@@ -288,82 +320,14 @@ def carrier_visual_search(query_description: str, model_series: str = "", top_k:
 
 
 def carrier_alarm_lookup(alarm_code: str, model_series: str) -> str:
-    """Specialized lookup for Carrier chiller alarm codes, trip conditions, and troubleshooting steps.
+    """Legacy alias: delegates directly to unified carrier_knowledge_search.
 
     Args:
         alarm_code: Exact alarm code (e.g., 'T051', 'A036', '014', 'P101', 'T055').
-        model_series: Chiller model series ('19XR', '23XRV', '30HX', '30RC', '30XV'). Required to prevent cross-manual diagnostics.
+        model_series: Chiller model series ('19XR', '23XRV', '30HX', '30RC', '30XV').
 
     Returns:
         Direct diagnostic resolution, cause analysis, and field service instructions.
     """
-    start_time = time.time()
-    clean_code = alarm_code.strip().upper()
-    model_series = model_series.strip().upper()
+    return carrier_knowledge_search(query=alarm_code, model_series=model_series, top_k=3)
 
-    # Check In-Memory Alarm Cache
-    cache_key = f"{model_series}:{clean_code}"
-    if cache_key in _ALARM_CACHE:
-        latency_ms = (time.time() - start_time) * 1000
-        _log_audit("TOOL_INVOCATION_CACHE_HIT", {
-            "tool": "carrier_alarm_lookup",
-            "cache_key": cache_key,
-            "latency_ms": round(latency_ms, 2)
-        })
-        return _ALARM_CACHE[cache_key]
-
-    _log_audit("TOOL_INVOCATION_START", {
-        "tool": "carrier_alarm_lookup",
-        "alarm_code": clean_code,
-        "model_series": model_series
-    })
-
-    try:
-        filt = {"model_series": {"$eq": model_series}}
-        req = vectorsearch_v1beta.SearchDataObjectsRequest(
-            parent=COLLECTION_NAME,
-            text_search=vectorsearch_v1beta.TextSearch(
-                search_text=clean_code,
-                data_field_names=["content"],
-                filter=filt,
-                top_k=3,
-                output_fields=vectorsearch_v1beta.OutputFields(
-                    data_fields=["chunk_id", "model_series", "form_number", "page_number", "section", "content"]
-                )
-            )
-        )
-
-        response = list(_search_client.search_data_objects(req))
-        latency_ms = (time.time() - start_time) * 1000
-
-        findings = []
-        for r in response:
-            d = dict(r.data_object.data)
-            form = d.get("form_number", "")
-            page = d.get("page_number", "")
-            section = d.get("section", "")
-            content = d.get("content", "")
-            findings.append(f"Source [Form {form}, Page {int(page) if isinstance(page, (int, float)) else page}, Section: {section}]:\n{content}")
-
-        _log_audit("TOOL_INVOCATION_SUCCESS", {
-            "tool": "carrier_alarm_lookup",
-            "alarm_code": clean_code,
-            "latency_ms": latency_ms,
-            "matches_found": len(findings)
-        })
-
-        if not findings:
-            return f"Alarm code '{clean_code}' not found in Carrier {model_series} documentation. Please verify the code or check if it applies to another model."
-
-        output_str = "\n\n".join(findings)
-        _ALARM_CACHE[cache_key] = output_str
-        return output_str
-
-    except Exception as e:
-        latency_ms = (time.time() - start_time) * 1000
-        _log_audit("TOOL_INVOCATION_ERROR", {
-            "tool": "carrier_alarm_lookup",
-            "latency_ms": latency_ms,
-            "error": str(e)
-        }, severity="ERROR")
-        return f"Error performing alarm lookup: {e}"

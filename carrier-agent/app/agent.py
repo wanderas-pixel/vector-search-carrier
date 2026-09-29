@@ -16,8 +16,7 @@ from google.genai import types
 
 from app.tools import (
     carrier_knowledge_search,
-    carrier_visual_search,
-    carrier_alarm_lookup
+    carrier_visual_search
 )
 from app.plugins import CarrierAuditLoggingPlugin
 
@@ -57,8 +56,7 @@ CRITICAL OPERATIONAL RULES:
    - Embed the retrieved diagram URL directly in your markdown response using markdown image syntax: `![<Caption>](<Image_URL>)` followed by the caption and manual reference.
 
 5. TOOL RETRIEVAL STRATEGY:
-   - For general operational, technical, and maintenance questions: Use `carrier_knowledge_search`.
-   - For specific alarm codes (e.g., T051, A036, 014, P101): Use `carrier_alarm_lookup`.
+   - For all technical, operational, troubleshooting, maintenance, and fault/alarm code inquiries: Use `carrier_knowledge_search`. It is a unified hybrid search engine (combining dense vector semantics + BM25 lexical token matching with dynamic RRF ranking) that seamlessly resolves both general procedures and exact fault codes (e.g. T051, A036, 014, P101).
    - For electrical schematics, control layouts, or piping diagrams: Use `carrier_visual_search`.
 
 6. RESPONSE VELOCITY & CONCISE FIELD SPECIFICATION:
@@ -80,7 +78,6 @@ root_agent = Agent(
     tools=[
         carrier_knowledge_search,
         carrier_visual_search,
-        carrier_alarm_lookup
     ],
 )
 
