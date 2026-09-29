@@ -12,6 +12,7 @@ import google.auth
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.planners import BuiltInPlanner
 from google.genai import types
 
 from app.tools import (
@@ -100,6 +101,9 @@ root_agent = Agent(
     model=Gemini(
         model=MODEL_NAME,
         retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    planner=BuiltInPlanner(
+        thinking_config=types.ThinkingConfig(thinking_budget=0)
     ),
     instruction=CARRIER_SPECIALIST_INSTRUCTION,
     tools=[

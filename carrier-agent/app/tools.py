@@ -250,23 +250,6 @@ def carrier_visual_search(query_description: str, model_series: str = "", top_k:
     clean_series = model_series or "ALL"
     cache_key = f"{clean_series}:{clean_desc}:{top_k}"
 
-    # Dedicated Hardware Component Routing for 30HX Main Base Board (MBB)
-    if model_series == "30HX" and any(k in clean_desc for k in ["main base board", "mbb", "base board", "board layout", "control board", "main board"]):
-        mbb_results = [
-            "### Main Base Board (MBB) Physical Component Layout & Control Box Mounting\n- **Model**: Carrier 30HX\n- **Reference**: Form 30HX-2T, Page 126, Fig. L\n- **Image URL**: https://storage.googleapis.com/genai-demos-391416-carrier-assets/diagrams/30HX/30HX-2T_p126_mbb_layout.webp\n- **Description**: Physical component layout showing the Main Base Board (MBB) mounted in the upper center of the control box adjacent to TB3 and ComfortLink Navigator display module, directly above AUX1, TB5, TB2, TB6, and CPM-A1 / CPM-B1.\n",
-            "### Main Base Board (MBB) Low Voltage Control Schematic & Pinouts (J1, J3, J5, J6, J7, J8, J10B)\n- **Model**: Carrier 30HX\n- **Reference**: Form 30HX-2T, Page 122, Fig. H\n- **Image URL**: https://storage.googleapis.com/genai-demos-391416-carrier-assets/diagrams/30HX/30HX-2T_p122_mbb_schematic.webp\n- **Description**: Low voltage control schematic detailing all MBB pin connections: J1 (24V power supply), J3 (LEN bus to EXV and AUX1), J5 (Navigator display), J6 (Safety interlocks & flow switch CWFS), J7 (Oil level switches & dual setpoint), J8 (Cooler/condenser thermistors & pressure transducers), J10B (liquid line solenoids).\n",
-            "### Fig. L — 30HXA/C 076-186 Component Arrangement (Control Box & MBB Layout)\n- **Model**: Carrier 30HX\n- **Reference**: Form 30HX-2T, Page 126\n- **Image URL**: https://storage.googleapis.com/genai-demos-391416-carrier-assets/diagrams/30HX/30HX-2T_p126_Fig_L.webp\n- **Description**: Complete control box physical arrangement diagram showing MBB, TB3, AUX1, and compressor protection modules.\n",
-            "### Fig. G — 30HX076-271 ComfortLink Control Schematic (24-v)\n- **Model**: Carrier 30HX\n- **Reference**: Form 30HX-2T, Page 121\n- **Image URL**: https://storage.googleapis.com/genai-demos-391416-carrier-assets/diagrams/30HX/30HX-2T_p121_Fig_G.webp\n- **Description**: 24-volt control schematic showing power distribution from secondary TRAN1-A to MBB (J1, J2) and AUX1.\n"
-        ]
-        output_str = "\n\n".join(mbb_results[:max(top_k, 2)])
-        _VISUAL_CACHE[cache_key] = output_str
-        _log_audit("TOOL_INVOCATION_SUCCESS", {
-            "tool": "carrier_visual_search",
-            "cache_type": "mbb_hardware_route",
-            "latency_ms": (time.time() - start_time) * 1000,
-            "results_found": len(mbb_results)
-        })
-        return output_str
 
     # Check In-Memory Visual Cache
     if cache_key in _VISUAL_CACHE:

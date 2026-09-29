@@ -61,7 +61,8 @@ MANUAL_CATALOG = [
     },
 ]
 
-FIGURE_PATTERN = re.compile(r"(Fig(?:ure)?\.?\s*\d+\s*[-–—]\s*[^.\n\r]+)", re.IGNORECASE)
+FIGURE_PATTERN = re.compile(r"(Fig(?:ure)?\.?\s*(?:[0-9]+|[A-Z])\s*[-–—:]\s*(?!ura|uri)[^.\n\r]+)", re.IGNORECASE)
+SCHEMATIC_PATTERN = re.compile(r"((?:POWER|CONTROL|FIELD WIRING|TYPICAL)\s+SCHEMATIC|WIRING DIAGRAM|COMPONENT ARRANGEMENT|BOARD LAYOUT)", re.IGNORECASE)
 TABLE_PATTERN = re.compile(r"(Table\s*\d+\s*[-–—]\s*[^.\n\r]+)", re.IGNORECASE)
 
 def ensure_gcs_bucket(storage_client: storage.Client, bucket_name: str) -> storage.Bucket:
@@ -158,8 +159,14 @@ def extract_and_process_manual(
         
         # Detect figures / schematics on this page
         figure_matches = FIGURE_PATTERN.findall(text)
-        has_diagram = len(figure_matches) > 0
-        diagram_caption = figure_matches[0].strip() if has_diagram else ""
+        schematic_match = SCHEMATIC_PATTERN.search(text)
+        has_diagram = len(figure_matches) > 0 or (schematic_match is not None and len(text.strip()) < 1500)
+        if figure_matches:
+            diagram_caption = figure_matches[0].strip()
+        elif schematic_match:
+            diagram_caption = schematic_match.group(1).strip()
+        else:
+            diagram_caption = ""
         
         image_url = ""
         visual_embedding = None

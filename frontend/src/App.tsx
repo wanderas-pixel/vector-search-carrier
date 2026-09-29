@@ -57,28 +57,28 @@ const CARRIER_MODELS = [
 const QUICK_PROMPTS = [
   {
     model: "30HX",
-    title: "Alarm T051 Diagnostic",
-    text: "On a Carrier 30HX chiller, what does alarm code T051 mean and what compressor does it refer to?",
+    title: "Main Base Board Layout",
+    text: "Show me the Main Base Board (MBB) component layout and wiring connections for the 30HX chiller.",
   },
   {
     model: "30XV",
     title: "Dual Emergency Stop Pinout",
-    text: "What is the exact terminal pinout for the Dual Emergency Stop option on the Carrier 30XV chiller?",
-  },
-  {
-    model: "30RC",
-    title: "R-32 A2L Safety Protocols",
-    text: "What are the mandatory safety and refrigerant handling protocols for servicing a 30RC chiller with R-32 Puron Advance?",
-  },
-  {
-    model: "30XV",
-    title: "Alarm Routing Schematic",
-    text: "Show the Alarm Routing Control schematic for the 30XV chiller.",
+    text: "What is the exact terminal pinout for the Dual Emergency Stop option on the Carrier 30XV chiller, and show the wiring schematic.",
   },
   {
     model: "23XRV",
-    title: "Economizer Flow Schematic",
-    text: "Provide the refrigerant flow schematic for the 23XRV economizer circuit.",
+    title: "VFD Control Wiring Schematic",
+    text: "Show the Foxboro VFD control wiring schematic and terminal connections for the 23XRV screw chiller.",
+  },
+  {
+    model: "30RC",
+    title: "Field Wiring & R-32 Protocols",
+    text: "Show the typical field wiring schematic and R-32 A2L safety protocols for the 30RC scroll chiller.",
+  },
+  {
+    model: "19XR",
+    title: "Oil Pressure Specs & Wiring",
+    text: "What are the lubrication oil pressure specifications and typical starter wiring for the 19XR centrifugal chiller?",
   },
 ];
 
@@ -158,8 +158,9 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
     }
   };
 
-  const handleSend = async (overrideText?: string) => {
+  const handleSend = async (overrideText?: string, overrideModel?: string) => {
     const textToSend = overrideText || input;
+    const targetModel = overrideModel !== undefined ? overrideModel : selectedModel;
     if (!textToSend.trim() || isGenerating) return;
 
     // Start precision turnaround timer
@@ -172,7 +173,7 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
       id: `usr_${Date.now()}`,
       role: "user",
       content: textToSend,
-      modelSeries: selectedModel,
+      modelSeries: targetModel,
       timestamp: new Date().toLocaleTimeString(),
     };
 
@@ -190,7 +191,7 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
       id: asstMsgId,
       role: "assistant",
       content: "",
-      modelSeries: selectedModel,
+      modelSeries: targetModel,
       toolsUsed: [],
       timestamp: new Date().toLocaleTimeString(),
     };
@@ -203,7 +204,7 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: textToSend,
-          model_series: selectedModel === "All Models" ? null : selectedModel,
+          model_series: targetModel === "All Models" ? null : targetModel,
           session_id: sessionId,
           client_send_time_ms: startTimestamp,
         }),
@@ -831,7 +832,7 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
             key={idx}
             onClick={() => {
               setSelectedModel(p.model);
-              handleSend(p.text);
+              handleSend(p.text, p.model);
             }}
             style={{
               whiteSpace: "nowrap",
