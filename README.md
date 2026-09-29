@@ -11,15 +11,15 @@
 
 ## 1. Executive Summary & Vision
 
-When a mission-critical commercial chiller plant suffers a fault in a hospital, semiconductor cleanroom, or Tier-IV data center, downtime costs routinely surpass **\$10,000 to \$50,000 per hour**. 
+When a mission-critical commercial chiller plant experiences a fault in a hospital, semiconductor manufacturing cleanroom, or Tier-IV data center, downtime costs routinely surpass **\$10,000 to \$50,000 per hour**. 
 
-Field service technicians face a formidable operational challenge: Carrier manufactures multiple distinct commercial chiller lines—including centrifugal (`19XR`), screw (`23XRV`), and air-cooled scroll/screw machines (`30HX`, `30RC`, `30XV`). Navigating **858 pages of dense engineering manuals**, tracing high-voltage control board schematics, deciphering alphanumeric fault codes, and preventing cross-equipment pinout contamination is time-consuming and error-prone.
+Field service technicians face a formidable operational challenge: Carrier manufactures multiple distinct commercial chiller lines—including centrifugal (`19XR`), screw (`23XRV`), and air-cooled scroll/screw machines (`30HX`, `30RC`, `30XV`). Navigating across **858 pages of dense engineering manuals**, tracing high-voltage control board schematics, deciphering alphanumeric fault codes, and preventing cross-equipment pinout contamination requires extreme precision.
 
 This project implements an enterprise-grade **Multimodal Field Specialist AI Assistant** built natively on **Google Cloud's next-generation Agentic Stack**:
-* **Pure Gemini 2.5 Flash Multimodal Ingestion (No Document AI)**: Multimodal PDF understanding extracts Markdown diagnostic tables and electrical schematics at **100x lower cost** (\$0.30/1k pages vs \$30/1k pages), eliminating hundreds of lines of brittle protobuf parsers and coordinate geometry code.
+* **Vertex AI Gemini 2.5 Flash Ingestion**: Native multimodal PDF comprehension extracts structured Markdown diagnostic tables, electrical schematics, and connector pinouts with sub-second processing speed and high cost efficiency (\$0.30 per 1,000 pages).
 * **Vertex AI Vector Search 2.0 (Agent Retrieval)**: Real-time hybrid search engine with instant kNN, zero index deployment delay, and dual-vector schemas combining dense semantic vectors with lexical BM25 keyword matching via Reciprocal Rank Fusion (RRF).
 * **Dual-Modal Embeddings**: Server-side auto-embeddings via `gemini-embedding-001` (768-dim) for text knowledge chunks alongside client-side `multimodalembedding@001` (1,408-dim) for high-resolution 300 DPI electrical schematics.
-* **Google Agent Development Kit (ADK 2.0)**: Production-grade agent orchestration framework managing tool dispatching, conversational memory, and diagnostic workflows. Configured with `BuiltInPlanner(thinking_budget=0)` to reduce turnaround latency from **34.7s down to 7.05s (4.5x speedup)**.
+* **Google Agent Development Kit (ADK 2.0)**: Production-grade agent orchestration framework managing tool dispatching, conversational memory, and diagnostic workflows. Configured with `BuiltInPlanner(thinking_budget=0)` for ultra-low latency execution (<7s total turn) and instant first-token streaming.
 * **Fleet-Wide Coverage**: Ingests, indexes, and isolates data across all 5 primary Carrier chiller series (`19XR`, `23XRV`, `30HX`, `30RC`, `30XV`).
 * **Interactive React 19 Frontend**: Delivers natural language diagnostic chat, model filtering chips, instant quick scenario prompts, and inline edge-to-edge WebP schematic rendering.
 * **End-to-End Enterprise Traceability**: Complete audit trails logged to Google Cloud Logging (`carrier-agent-audit`), stamping every response with deterministic chunk IDs and canonical citations: `[Carrier Form <form_number>, Page <page_number>, Section: <section_name>]`.
@@ -38,7 +38,7 @@ This project implements an enterprise-grade **Multimodal Field Specialist AI Ass
 │             CLOUD RUN INGESTION WORKER                 │
 │         (Serverless Multi-Threaded Host)               │
 │                                                        │
-│  ├── 1. Pure Gemini 2.5 Flash Vision: Tables & Schematics│
+│  ├── 1. Gemini 2.5 Flash Vision: Tables & Schematics   │
 │  ├── 2. Multimodal Embeddings: multimodalembedding@001 │
 │  └── 3. Batch Ingestion: DataObject Batch Size = 50   │
 └────────────────────────────────────────────────────────┘
@@ -83,25 +83,24 @@ The platform natively supports Carrier's five primary commercial chiller lines:
 
 ---
 
-## 4. Key Differentiators & Technical Innovations
+## 4. Key Architectural Highlights & Capabilities
 
-### 1. Pure Gemini 2.5 Flash Multimodal Extraction vs. Legacy OCR
-Legacy systems rely on Document AI Layout Parser or OCR pipelines that struggle with complex HVAC wiring schematics, fragment multi-line table headers, and cost \$30.00 per 1,000 pages. 
-This solution replaces Document AI entirely with **Vertex AI Gemini 2.5 Flash**:
-* Direct multimodal PDF understanding at **\$0.30 per 1,000 pages (~100x cost reduction)**.
-* Lossless conversion of complex multi-column diagnostic charts into GitHub-flavored Markdown.
-* Automated schematic boundary identification, component tagging (`CIOB`, `MBB`, `TB1`), and connector pinout extraction (`J40 Pins 1-2`).
+### 1. Gemini 2.5 Flash Multimodal Extraction Engine
+The ingestion pipeline leverages **Vertex AI Gemini 2.5 Flash** for direct, high-fidelity multimodal document understanding:
+* **Direct Multimodal Processing**: Ingests high-resolution PDF pages natively without intermediate text rasterization steps.
+* **Lossless Table Conversion**: Formats complex multi-column diagnostic charts, pressure-temperature ratings, and alarm matrices directly into GitHub-flavored Markdown.
+* **Schematic & Pinout Extraction**: Identifies electrical boundary regions, isolates schematic figures, tags circuit components (`CIOB`, `MBB`, `TB1`), and extracts precise connector pinout mappings (e.g. `J40 Pins 1-2`).
+* **High Efficiency**: Processes documentation catalogs at \$0.30 per 1,000 pages with full multimodal vision support.
 
 ### 2. Dual Embedding Strategy in Vector Search 2.0
 * **`text_embedding` (768-dim)**: Automatically generated **server-side** by Vector Search 2.0 using `gemini-embedding-001` via structured templates (`Equipment: {model_series} | Manual: {form_number} | Page: {page_number}...`).
 * **`visual_embedding` (1,408-dim)**: Generated **client-side in Cloud Run** via `multimodalembedding@001` by pairing 300 DPI WebP image bytes with extracted contextual domain text, allowing technicians to retrieve exact wiring diagrams via natural language.
 
-### 3. Latency Optimization: 34.7s down to 7.05s
-Profiling via Google Cloud Logging revealed that while Vector Search 2.0 executed in **only 925 ms**, Gemini 2.5 Flash's default "Thinking Mode" produced over 1,200 hidden chain-of-thought reasoning tokens before generating table outputs. By configuring:
-```python
-BuiltInPlanner(thinking_config=types.ThinkingConfig(thinking_budget=0))
-```
-reasoning token latency overhead was eliminated, resulting in a **4.5x speedup** with instantaneous first-token streaming.
+### 3. High-Velocity Reasoning via BuiltInPlanner Configuration
+To ensure field technicians receive instant guidance during critical plant servicing, the Google ADK 2.0 agent is tuned for immediate execution:
+* **Sub-Second Vector Retrieval**: Vertex AI Vector Search 2.0 resolves complex hybrid k-NN queries in under 925 ms.
+* **Targeted Reasoning Budget**: The ADK agent configures `BuiltInPlanner(thinking_budget=0)` to deliver immediate first-token streaming without unnecessary token generation overhead.
+* **Rapid Turnaround**: Complete diagnostic turns—including hybrid retrieval, table formatting, and schematic linking—resolve in ~7 seconds.
 
 ---
 
