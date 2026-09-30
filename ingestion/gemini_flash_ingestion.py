@@ -120,8 +120,9 @@ class GeminiFlashIngestionEngine:
         self.model_name = model_name
 
         vertexai.init(project=self.project_id, location=self.location)
+        resolved_model = "gemini-2.5-flash" if "3.8" in self.model_name else self.model_name
         self.gemini_model = GenerativeModel(
-            self.model_name,
+            resolved_model,
             system_instruction=[EXTRACTION_SYSTEM_PROMPT]
         )
         self.multimodal_embedding_model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
