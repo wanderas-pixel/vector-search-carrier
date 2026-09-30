@@ -181,6 +181,6 @@ All access is secured via **Google Cloud IAM & Application Default Credentials (
 
 ---
 
-##8. Disclaimers
+## 8. Disclaimers
 This is not an officially supported Google product.
 This software is provided "as is", without warranty of any kind, expressed or implied, including but not limited to, the warranties of merchantability, fitness for a particular purpose, and/or infringement.
