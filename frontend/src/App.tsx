@@ -56,12 +56,18 @@ const CARRIER_MODELS = [
 
 function cleanMarkdown(t: string): string {
   if (!t) return "";
-  // Split merged table header and delimiter: e.g. "| Col | |:--- |" -> "| Col |\n|:--- |"
-  let cleaned = t.replace(/(\|\s*)(\|[:\- ]+\|)/g, "$1\n$2");
-  // Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
+  // 1. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |"):
+  let cleaned = t.replace(/\|\s*\|/g, "|\n|");
+  // 2. Remove runaway ASCII divider lines (e.g. ------ without pipes)
   cleaned = cleaned.replace(/^[ \t]*[-=]{6,}[ \t]*$/gm, "");
-  // Collapse repeated horizontal rule markers (---)
   cleaned = cleaned.replace(/(?:^[ \t]*---[ \t]*$\n?){2,}/gm, "---\n");
+  // 3. Remove any blank lines between table rows (tables require adjacent rows)
+  cleaned = cleaned.replace(/\|\s*\n\s*\n\s*\|/g, "|\n|");
+  cleaned = cleaned.replace(/\|\s*\n\s*\n\s*\|/g, "|\n|");
+  // 4. Ensure citations that are glued together on one line are split cleanly onto their own lines
+  cleaned = cleaned.replace(/(\[[^\]]+\])\s*(?=\[[^\]]+\])/g, "$1\n");
+  // 5. Ensure blank line before citations at end of table
+  cleaned = cleaned.replace(/(\|[^\n]+\|)\s*(\[[A-Z])/g, "$1\n\n$2");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
   return cleaned;
 }

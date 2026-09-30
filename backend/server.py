@@ -196,15 +196,22 @@ def _determine_effective_prompt(message: str, model_series: Optional[str]) -> st
 
 
 def _clean_markdown_text(text: str) -> str:
-    """Sanitizes merged markdown table headers and repetitive ASCII dashes."""
+    """Sanitizes merged markdown table headers, data rows, and repetitive ASCII dashes."""
     if not text:
         return ""
-    # Split merged table header and delimiter: e.g. "| Col | |:--- |" -> "| Col |\n|:--- |"
-    text = re.sub(r'(\|\s*)(\|[:\- ]+\|)', r'\1\n\2', text)
-    # Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
+    # 1. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |")
+    text = re.sub(r'\|\s*\|', '|\n|', text)
+    # 2. Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
     text = re.sub(r'^[ \t]*[-=]{6,}[ \t]*$', '', text, flags=re.MULTILINE)
-    # Collapse repeated horizontal rule markers (---)
+    # 3. Collapse repeated horizontal rule markers (---)
     text = re.sub(r'(?:^[ \t]*---[ \t]*$\n?){2,}', '---\n', text, flags=re.MULTILINE)
+    # 4. Remove blank lines between table rows (tables require adjacent rows)
+    text = re.sub(r'\|\s*\n\s*\n\s*\|', '|\n|', text)
+    text = re.sub(r'\|\s*\n\s*\n\s*\|', '|\n|', text)
+    # 5. Ensure citations that are glued together on one line are split cleanly onto their own lines
+    text = re.sub(r'(\[[^\]]+\])\s*(?=\[[^\]]+\])', r'\1\n', text)
+    # 6. Ensure blank line before citations at end of table
+    text = re.sub(r'(\|[^\n]+\|)\s*(\[[A-Z])', r'\1\n\n\2', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text
 
