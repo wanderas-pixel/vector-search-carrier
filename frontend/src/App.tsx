@@ -277,7 +277,18 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
                 )
               );
             } else if (payload.type === "error") {
-              throw new Error(payload.error);
+              clearInterval(timerIntervalRef.current);
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === asstMsgId
+                    ? {
+                        ...msg,
+                        content: `⚠️ **Server/Authentication Error**: ${payload.error}`,
+                      }
+                    : msg
+                )
+              );
+              break;
             }
           } catch (e: any) {
             console.error("Error processing stream chunk:", e);
