@@ -196,22 +196,45 @@ def _determine_effective_prompt(message: str, model_series: Optional[str]) -> st
 
 
 def _clean_markdown_text(text: str) -> str:
-    """Sanitizes merged markdown table headers, data rows, and repetitive ASCII dashes."""
+    """Sanitizes merged markdown table headers, data rows, repetitive ASCII dashes, and auto-embeds image URLs."""
     if not text:
         return ""
-    # 1. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |")
+    # 1. Convert any text image links or bullet URLs to markdown image syntax
+    # E.g. "- Image URL: http..." or "- **Image URL**: http..." -> "\n\n![Carrier Technical Schematic](http...)\n\n"
+    text = re.sub(
+        r'(?:-\s*)?(?:\*\*)?Image URL(?:\*\*)?:\s*\[?(https?://[^\s\)]+(?:/api/image/|\.webp|\.png|\.jpg|\.jpeg)[^\s\)]*)\]?',
+        r'\n\n![Carrier Technical Schematic](\1)\n\n',
+        text,
+        flags=re.IGNORECASE
+    )
+    # Convert non-image markdown links pointing to diagrams: [Caption](http://.../api/image/...webp) -> ![Caption](http://.../api/image/...webp)
+    text = re.sub(
+        r'(^|[^!])\[([^\]]+)\]\((https?://[^\s\)]+(?:/api/image/|\.webp|\.png|\.jpg|\.jpeg)[^\s\)]*)\)',
+        r'\1\n\n![\2](\3)\n\n',
+        text
+    )
+    # If an image URL is on a line by itself
+    text = re.sub(
+        r'(^|\n)(https?://[^\s\)]+/api/image/[^\s\)]+\.(?:webp|png|jpg|jpeg))(\n|$)',
+        r'\1\n![Carrier Technical Schematic](\2)\n\3',
+        text,
+        flags=re.IGNORECASE
+    )
+    # 2. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |")
     text = re.sub(r'\|\s*\|', '|\n|', text)
-    # 2. Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
+    # 3. Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
     text = re.sub(r'^[ \t]*[-=]{6,}[ \t]*$', '', text, flags=re.MULTILINE)
-    # 3. Collapse repeated horizontal rule markers (---)
+    # 4. Collapse repeated horizontal rule markers (---)
     text = re.sub(r'(?:^[ \t]*---[ \t]*$\n?){2,}', '---\n', text, flags=re.MULTILINE)
-    # 4. Remove blank lines between table rows (tables require adjacent rows)
+    # 5. Remove blank lines between table rows (tables require adjacent rows)
     text = re.sub(r'\|\s*\n\s*\n\s*\|', '|\n|', text)
     text = re.sub(r'\|\s*\n\s*\n\s*\|', '|\n|', text)
-    # 5. Ensure citations that are glued together on one line are split cleanly onto their own lines
+    # 6. Ensure citations that are glued together on one line are split cleanly onto their own lines
     text = re.sub(r'(\[[^\]]+\])\s*(?=\[[^\]]+\])', r'\1\n', text)
-    # 6. Ensure blank line before citations at end of table
+    # 7. Ensure blank line before citations at end of table
     text = re.sub(r'(\|[^\n]+\|)\s*(\[[A-Z])', r'\1\n\n\2', text)
+    # 8. Ensure standalone images have blank lines around them
+    text = re.sub(r'([^\n])\n*(!\[[^\]]*\]\([^\)]+\))\n*([^\n])', r'\1\n\n\2\n\n\3', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text
 

@@ -306,7 +306,12 @@ def carrier_visual_search(query_description: str, model_series: str = "", top_k:
             m_series = d.get("model_series", "")
 
             diagrams.append({"chunk_id": cid, "caption": caption, "url": img_url})
-            entry = f"### {caption}\n- **Model**: Carrier {m_series}\n- **Reference**: Form {form}, Page {int(page) if isinstance(page, (int, float)) else page}\n- **Image URL**: {img_url}\n"
+            entry = (
+                f"### {caption}\n\n"
+                f"![{caption}]({img_url})\n\n"
+                f"- **Model**: Carrier {m_series}\n"
+                f"- **Reference**: Form {form}, Page {int(page) if isinstance(page, (int, float)) else page}\n"
+            )
             results.append(entry)
 
         _log_audit("TOOL_INVOCATION_SUCCESS", {

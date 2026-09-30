@@ -56,18 +56,27 @@ const CARRIER_MODELS = [
 
 function cleanMarkdown(t: string): string {
   if (!t) return "";
-  // 1. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |"):
-  let cleaned = t.replace(/\|\s*\|/g, "|\n|");
-  // 2. Remove runaway ASCII divider lines (e.g. ------ without pipes)
+  // 1. Convert any text image links or bullet URLs to markdown image syntax
+  // E.g. "- Image URL: http..." or "- **Image URL**: http..." -> "\n\n![Carrier Technical Schematic](http...)\n\n"
+  let cleaned = t.replace(/(?:-\s*)?(?:\*\*)?Image URL(?:\*\*)?:\s*\[?(https?:\/\/[^\s\)]+(?:\/api\/image\/|\.webp|\.png|\.jpg|\.jpeg)[^\s\)]*)\]?/gi, "\n\n![Carrier Technical Schematic]($1)\n\n");
+  // Also convert non-image markdown links pointing to diagrams: [Caption](http://.../api/image/...webp) -> ![Caption](http://.../api/image/...webp)
+  cleaned = cleaned.replace(/(^|[^!])\[([^\]]+)\]\((https?:\/\/[^\s\)]+(?:\/api\/image\/|\.webp|\.png|\.jpg|\.jpeg)[^\s\)]*)\)/g, "$1\n\n![$2]($3)\n\n");
+  // Also if an image URL is on a line by itself:
+  cleaned = cleaned.replace(/(^|\n)(https?:\/\/[^\s\)]+\/api\/image\/[^\s\)]+\.(?:webp|png|jpg|jpeg))(\n|$)/gi, "$1\n![Carrier Technical Schematic]($2)\n$3");
+  // 2. Separate merged table rows and delimiters (e.g. "| |:---" or "| | Alm-" or "| |"):
+  cleaned = cleaned.replace(/\|\s*\|/g, "|\n|");
+  // 3. Remove runaway ASCII divider lines (e.g. ------ without pipes)
   cleaned = cleaned.replace(/^[ \t]*[-=]{6,}[ \t]*$/gm, "");
   cleaned = cleaned.replace(/(?:^[ \t]*---[ \t]*$\n?){2,}/gm, "---\n");
-  // 3. Remove any blank lines between table rows (tables require adjacent rows)
+  // 4. Remove any blank lines between table rows (tables require adjacent rows)
   cleaned = cleaned.replace(/\|\s*\n\s*\n\s*\|/g, "|\n|");
   cleaned = cleaned.replace(/\|\s*\n\s*\n\s*\|/g, "|\n|");
-  // 4. Ensure citations that are glued together on one line are split cleanly onto their own lines
+  // 5. Ensure citations that are glued together on one line are split cleanly onto their own lines
   cleaned = cleaned.replace(/(\[[^\]]+\])\s*(?=\[[^\]]+\])/g, "$1\n");
-  // 5. Ensure blank line before citations at end of table
+  // 6. Ensure blank line before citations at end of table
   cleaned = cleaned.replace(/(\|[^\n]+\|)\s*(\[[A-Z])/g, "$1\n\n$2");
+  // 7. Ensure standalone images have blank lines around them
+  cleaned = cleaned.replace(/([^\n])\n*(!\[[^\]]*\]\([^\)]+\))\n*([^\n])/g, "$1\n\n$2\n\n$3");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
   return cleaned;
 }
