@@ -54,6 +54,18 @@ const CARRIER_MODELS = [
   { id: "30XV", label: "AquaForce 30XV", badge: "Variable Screw" },
 ];
 
+function cleanMarkdown(t: string): string {
+  if (!t) return "";
+  // Split merged table header and delimiter: e.g. "| Col | |:--- |" -> "| Col |\n|:--- |"
+  let cleaned = t.replace(/(\|\s*)(\|[:\- ]+\|)/g, "$1\n$2");
+  // Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
+  cleaned = cleaned.replace(/^[ \t]*[-=]{6,}[ \t]*$/gm, "");
+  // Collapse repeated horizontal rule markers (---)
+  cleaned = cleaned.replace(/(?:^[ \t]*---[ \t]*$\n?){2,}/gm, "---\n");
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  return cleaned;
+}
+
 const QUICK_PROMPTS = [
   {
     model: "30HX",
@@ -670,6 +682,9 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
+                      hr: ({ node, ...props }) => (
+                        <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "16px 0" }} {...props} />
+                      ),
                       img: ({ node, ...props }) => {
                         const rawUrl = props.src || "";
                         const resolvedUrl = rawUrl.replace(
@@ -769,7 +784,7 @@ Select a chiller series below or ask any diagnostic, pinout, or schematic questi
                       ),
                     }}
                   >
-                    {msg.content}
+                    {cleanMarkdown(msg.content)}
                   </ReactMarkdown>
                 </div>
               </div>

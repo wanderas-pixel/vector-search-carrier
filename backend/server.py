@@ -195,6 +195,20 @@ def _determine_effective_prompt(message: str, model_series: Optional[str]) -> st
     return message
 
 
+def _clean_markdown_text(text: str) -> str:
+    """Sanitizes merged markdown table headers and repetitive ASCII dashes."""
+    if not text:
+        return ""
+    # Split merged table header and delimiter: e.g. "| Col | |:--- |" -> "| Col |\n|:--- |"
+    text = re.sub(r'(\|\s*)(\|[:\- ]+\|)', r'\1\n\2', text)
+    # Remove lines with 6 or more dashes/hyphens that were output as ASCII borders
+    text = re.sub(r'^[ \t]*[-=]{6,}[ \t]*$', '', text, flags=re.MULTILINE)
+    # Collapse repeated horizontal rule markers (---)
+    text = re.sub(r'(?:^[ \t]*---[ \t]*$\n?){2,}', '---\n', text, flags=re.MULTILINE)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     server_start_t = time.time()
@@ -256,6 +270,7 @@ async def chat(req: ChatRequest):
         gcs_prefix = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/"
         proxy_prefix = "http://localhost:8000/api/image/"
         response_text = response_text.replace(gcs_prefix, proxy_prefix)
+        response_text = _clean_markdown_text(response_text)
 
         # Calculate estimated network transit if client provided performance.now()
         network_latency_est_ms = 0.0

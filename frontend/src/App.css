@@ -182,3 +182,15 @@
     border-right-color: var(--border);
   }
 }
+
+/* Enhanced Markdown Table & Divider styling */
+.prose hr + hr {
+  display: none !important;
+}
+
+.prose hr {
+  margin: 16px 0 !important;
+  border: none !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
