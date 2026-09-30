@@ -178,3 +178,9 @@ All tool executions, vector latencies, and citation lists are asynchronously exp
 * **`carrier-api-server`**: Records HTTP request life cycle, payload sizes, and SSE stream durations.
 
 All access is secured via **Google Cloud IAM & Application Default Credentials (ADC)** with zero persistent API keys or secrets.
+
+---
+
+##8. Disclaimers
+This is not an officially supported Google product.
+This software is provided "as is", without warranty of any kind, expressed or implied, including but not limited to, the warranties of merchantability, fitness for a particular purpose, and/or infringement.
